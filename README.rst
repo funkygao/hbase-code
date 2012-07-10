@@ -9,6 +9,26 @@ hbase source code explaination
 .. section-numbering::
 
 
-Introduction
+How to start
 ============
+
+Server
+------
 org.apache.hadoop.hbase.master.HMaster
+org.apache.hadoop.hbase.regionserver.HRegionServer
+org.apache.hadoop.hbase.regionserver.HRegion
+
+
+Client
+------
+org.apache.hadoop.hbase.client.HTable
+
+
+Logs
+====
+
+- master log
+
+- region server log
+
+- zookeeper log
