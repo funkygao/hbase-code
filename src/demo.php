@@ -1,6 +1,6 @@
 <?php
 /**
- * 演示PHP通过thrift操作HBase.
+ * 婕旂ずPHP閫氳繃thrift鎿嶄綔HBase.
  *
  * <code>
  * /opt/app/thrift/bin/thrift -gen php /opt/app/hbase-0.90.3/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
