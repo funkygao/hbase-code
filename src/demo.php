@@ -19,10 +19,13 @@ define('THRIFT_ROOT', '/usr/lib/php');
 define('HBASE_HOST', '192.168.0.106');
 define('HBASE_PORT', 9090);
 
+// load thrift lib for php
 require_once(THRIFT_ROOT . '/Thrift.php');
 require_once(THRIFT_ROOT . '/transport/TSocket.php');
 require_once(THRIFT_ROOT . '/transport/TBufferedTransport.php');
 require_once(THRIFT_ROOT . '/protocol/TBinaryProtocol.php');
+
+// load the thrift generated stub
 require_once dirname(__FILE__) . '/Hbase.php';
 
 // open connection
