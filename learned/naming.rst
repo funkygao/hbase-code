@@ -11,14 +11,24 @@ naming learned from hbase
 Class naming
 ============
 
+- HConstants
+
+- YouAreDeadException
+
 
 Method naming
 =============
 
-- getRegionsCount()
+- getRegionsCount
+
+- prettyPrint
 
 
 Variable naming
 ===============
 
 
+Constant naming
+===============
+
+- HConstants.FOREVER

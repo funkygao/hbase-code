@@ -1,0 +1,14 @@
+arch
+====
+::
+
+
+    iStoppable      iAbortable
+      |                    |
+       --------------------
+               ^
+               |
+            iServer
+
+
+
