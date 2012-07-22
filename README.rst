@@ -52,6 +52,8 @@ Setup the following environ variables for other scripts:
 bin/hbase
 #########
 
+Invoker for other scripts!
+
 Run a dedicated class. e,g:
 
 bin/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg
