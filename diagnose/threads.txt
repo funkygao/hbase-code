@@ -1,0 +1,154 @@
+Sampling process 2478 for 3 seconds with 1 millisecond of run time between samples
+Sampling completed, processing symbols...
+Analysis of sampling java (pid 2478) every 1 millisecond
+Process:         java [2478]
+Path:            /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home/bin/java
+Load Address:    0x100000000
+Identifier:      java
+Version:         1.0 (1.0)
+Code Type:       X86-64 (Native)
+Parent Process:  /sbin/launchd [1]
+
+Date/Time:       2012-07-22 14:22:54.255 +0800
+OS Version:      Mac OS X 10.6.8 (10K549)
+Report Version:  6
+
+Call graph:
+    1520 Thread_38201   DispatchQueue_1: com.apple.main-thread  (serial)
+    1520 Thread_38212
+    1520 Thread_38213: Java: Exception Handler Thread
+    1520 Thread_38214: Java: Gang worker#0 (Parallel GC Threads)
+    1520 Thread_38215: Java: Gang worker#1 (Parallel GC Threads)
+    1520 Thread_38216: Java: Gang worker#2 (Parallel GC Threads)
+    1520 Thread_38217: Java: Gang worker#3 (Parallel GC Threads)
+    1520 Thread_38218: Java: Concurrent Mark-Sweep GC Thread
+    1520 Thread_38219: Java: VM Thread
+    1520 Thread_38220: Java: Reference Handler
+    1520 Thread_38221: Java: Finalizer
+    1520 Thread_38222   DispatchQueue_2: com.apple.libdispatch-manager  (serial)
+    1520 Thread_38224: Java: Surrogate Locker Thread (Concurrent GC)
+    1520 Thread_38225: Java: Signal Dispatcher
+    1520 Thread_38226: Java: C2 CompilerThread0
+    1520 Thread_38227: Java: C2 CompilerThread1
+    1520 Thread_38228: Java: Low Memory Detector
+    1520 Thread_38229: Java: VM Periodic Task Thread
+    1520 Thread_38233: Java: NIOServerCxn.Factory:0.0.0.0/0.0.0.0:2181
+    1520 Thread_38234: Java: SessionTracker
+    1520 Thread_38236: Java: SyncThread:0
+    1520 Thread_38237: Java: ProcessThread:-1
+    1520 Thread_38240: Java: IPC Reader 0 on port 50439
+    1520 Thread_38241: Java: IPC Reader 1 on port 50439
+    1520 Thread_38242: Java: IPC Reader 2 on port 50439
+    1520 Thread_38243: Java: IPC Reader 3 on port 50439
+    1520 Thread_38244: Java: IPC Reader 4 on port 50439
+    1520 Thread_38245: Java: IPC Reader 5 on port 50439
+    1520 Thread_38246: Java: IPC Reader 6 on port 50439
+    1520 Thread_38247: Java: IPC Reader 7 on port 50439
+    1520 Thread_38248: Java: IPC Reader 8 on port 50439
+    1520 Thread_38249: Java: IPC Reader 9 on port 50439
+    1520 Thread_38250: Java: IPC Server Responder
+    1520 Thread_38251: Java: IPC Server listener on 50439
+    1520 Thread_38252: Java: IPC Server handler 0 on 50439
+    1520 Thread_38253: Java: IPC Server handler 1 on 50439
+    1520 Thread_38254: Java: IPC Server handler 2 on 50439
+    1520 Thread_38255: Java: IPC Server handler 3 on 50439
+    1520 Thread_38256: Java: IPC Server handler 4 on 50439
+    1520 Thread_38257: Java: IPC Server handler 5 on 50439
+    1520 Thread_38258: Java: IPC Server handler 6 on 50439
+    1520 Thread_38259: Java: IPC Server handler 7 on 50439
+    1520 Thread_38260: Java: IPC Server handler 8 on 50439
+    1520 Thread_38261: Java: IPC Server handler 9 on 50439
+    1520 Thread_38262: Java: main-SendThread(localhost:2181)
+    1520 Thread_38263: Java: main-EventThread
+    1520 Thread_38264: Java: main-SendThread(localhost:2181)
+    1520 Thread_38265: Java: main-EventThread
+    1520 Thread_38266: Java: IPC Reader 0 on port 50442
+    1520 Thread_38267: Java: IPC Reader 1 on port 50442
+    1520 Thread_38268: Java: IPC Reader 2 on port 50442
+    1520 Thread_38269: Java: IPC Reader 3 on port 50442
+    1520 Thread_38270: Java: IPC Reader 4 on port 50442
+    1520 Thread_38271: Java: IPC Reader 5 on port 50442
+    1520 Thread_38272: Java: IPC Reader 6 on port 50442
+    1520 Thread_38273: Java: IPC Reader 7 on port 50442
+    1520 Thread_38274: Java: IPC Reader 8 on port 50442
+    1520 Thread_38275: Java: IPC Reader 9 on port 50442
+    1520 Thread_38276: Java: Master:0;192.168.0.106:50439
+    1520 Thread_38277: Java: RegionServer:0;192.168.0.106,50442,1342928269669
+    1520 Thread_38278: Java: RegionServer:0;192.168.0.106,50442,1342928269669-SendThre
+    1520 Thread_38279: Java: RegionServer:0;192.168.0.106,50442,1342928269669-EventThr
+    1520 Thread_38290: Java: Master:0;192.168.0.106:50439-SendThread(localhost:2181)
+    1520 Thread_38291: Java: Master:0;192.168.0.106:50439-EventThread
+    1520 Thread_38292: Java: 192.168.0.106:50439.timeoutMonitor
+    1520 Thread_38293: Java: Master:0;192.168.0.106:50439.oldLogCleaner
+    1520 Thread_38294: Java: IPC Client (47) connection to 192.168.0.106/192.168.0.106
+      1520 thread_start
+        1520 _pthread_start
+          1520 jio_snprintf
+            1520 JVM_StartThread
+              1520 JVM_StartThread
+                1520 JVM_StartThread
+                  1520 JVM_StartThread
+                    1520 JVM_StartThread
+                      1520 JVM_Lseek
+                        1520 0x103801438
+                          1520 0x103806a82
+                            1520 0x10380685a
+                              1520 0x103811d6e
+                                1520 JVM_MonitorWait
+                                  1520 JVM_MonitorWait
+                                    1520 JVM_Write
+                                      1520 JVM_Write
+                                        1520 JVM_Write
+                                          1520 JVM_Write
+                                            1520 mach_msg
+                                              1520 mach_msg_trap
+    1520 Thread_38295: Java: 2013151593@qtp-86823325-0
+    1520 Thread_38296: Java: 1589377628@qtp-86823325-1 - Acceptor0 SelectChannelConnec
+    1520 Thread_38301: Java: Poller SunPKCS11-Darwin
+    1520 Thread_38302: Java: Timer-0
+    1520 Thread_38312: Java: RegionServer:0;192.168.0.106,50442,1342928269669.logSynce
+    1520 Thread_38313: Java: RegionServer:0;192.168.0.106,50442,1342928269669.logRolle
+    1520 Thread_38314: Java: RegionServer:0;192.168.0.106,50442,1342928269669.cacheFlu
+    1520 Thread_38315: Java: RegionServer:0;192.168.0.106,50442,1342928269669.compacto
+    1520 Thread_38316: Java: RegionServer:0;192.168.0.106,50442,1342928269669.majorCom
+    1520 Thread_38317: Java: RegionServer:0;192.168.0.106,50442,1342928269669.leaseChe
+    1520 Thread_38318: Java: 1695413474@qtp-2089015486-0
+    1520 Thread_38319: Java: 768974140@qtp-2089015486-1 - Acceptor0 SelectChannelConne
+    1520 Thread_38322: Java: Timer-1
+    1520 Thread_38323: Java: IPC Server Responder
+    1520 Thread_38324: Java: IPC Server listener on 50442
+    1520 Thread_38325: Java: IPC Server handler 0 on 50442
+    1520 Thread_38326: Java: IPC Server handler 1 on 50442
+    1520 Thread_38327: Java: IPC Server handler 2 on 50442
+    1520 Thread_38328: Java: IPC Server handler 3 on 50442
+    1520 Thread_38329: Java: IPC Server handler 4 on 50442
+    1520 Thread_38330: Java: IPC Server handler 5 on 50442
+    1520 Thread_38331: Java: IPC Server handler 6 on 50442
+    1520 Thread_38332: Java: IPC Server handler 7 on 50442
+    1520 Thread_38333: Java: IPC Server handler 8 on 50442
+    1520 Thread_38334: Java: IPC Server handler 9 on 50442
+    1520 Thread_38335: Java: PRI IPC Server handler 0 on 50442
+    1520 Thread_38336: Java: PRI IPC Server handler 1 on 50442
+    1520 Thread_38337: Java: PRI IPC Server handler 2 on 50442
+    1520 Thread_38338: Java: PRI IPC Server handler 3 on 50442
+    1520 Thread_38339: Java: PRI IPC Server handler 4 on 50442
+    1520 Thread_38340: Java: PRI IPC Server handler 5 on 50442
+    1520 Thread_38341: Java: PRI IPC Server handler 6 on 50442
+    1520 Thread_38342: Java: PRI IPC Server handler 7 on 50442
+    1520 Thread_38343: Java: PRI IPC Server handler 8 on 50442
+    1520 Thread_38344: Java: PRI IPC Server handler 9 on 50442
+    1520 Thread_38345: Java: LruBlockCache.EvictionThread
+    1520 Thread_38346: Java: LRU Statistics #0
+    1520 Thread_38359: Java: RS_OPEN_ROOT-192.168.0.106,50442,1342928269669-0
+    1520 Thread_38362: Java: MASTER_OPEN_REGION-192.168.0.106:50439-0
+    1520 Thread_38363: Java: RS_OPEN_META-192.168.0.106,50442,1342928269669-0
+    1520 Thread_38365: Java: MASTER_OPEN_REGION-192.168.0.106:50439-1
+    1520 Thread_38372: Java: RS_OPEN_REGION-192.168.0.106,50442,1342928269669-0
+    1520 Thread_38373: Java: RS_OPEN_REGION-192.168.0.106,50442,1342928269669-1
+    1520 Thread_38374: Java: RS_OPEN_REGION-192.168.0.106,50442,1342928269669-2
+    1520 Thread_38378: Java: MASTER_OPEN_REGION-192.168.0.106:50439-2
+    1520 Thread_38379: Java: MASTER_OPEN_REGION-192.168.0.106:50439-3
+    1520 Thread_38380: Java: MASTER_OPEN_REGION-192.168.0.106:50439-4
+    1520 Thread_38382: Java: 192.168.0.106:50439-BalancerChore
+    1520 Thread_38383: Java: 192.168.0.106:50439-CatalogJanitor
+
