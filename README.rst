@@ -24,6 +24,8 @@ Tips
 
 Enable log debug level and check out the log file and find the main routines.
 
+conf/log4j.properties
+
 How to start
 ============
 
