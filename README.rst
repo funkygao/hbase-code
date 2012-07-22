@@ -18,6 +18,12 @@ Test code excluded:
 
 - 146,616 java LOC
 
+
+Tips
+====
+
+Enable log debug level and check out the log file and find the main routines.
+
 How to start
 ============
 
