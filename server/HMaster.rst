@@ -75,6 +75,32 @@ run
 
 
 
+stop
+====
+
+::
+
+
+                 - balancerChore.interrupt()
+    stopChores -|
+          |      - catalogJanitorChore.interrupt()
+          |
+    serverManager.letRegionServersShutdown
+          |
+          |
+          |              - rpcServer
+    stopServiceThreads -|- logCleaner
+          |             |- infoServer
+          |              - executorService
+          |
+          |
+    HConnectionManager.deleteConnection
+          |
+          |
+    zooKeeper.close()
+
+
+
 main components
 ===============
 
