@@ -31,15 +31,73 @@ How to start
 
 Scripts
 -------
+
+bin/hbase-config.sh
+###################
+
+Setup the following environ variables for other scripts:
+
+- JAVA_HOME
+
+- HBASE_HOME
+
+- HBASE_CONF_DIR
+
+- HBASE_REGIONSERVERS  
+
+- HBASE_BACKUP_MASTERS
+
+- source ${HBASE_CONF_DIR}/hbase-env.sh
+
 bin/hbase
+#########
 
-bin/start-hbase.sh
+Run a dedicated class. e,g:
 
-bin/stop-hbase.sh
+bin/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg
 
-bin/hbase-daemon.sh
+Setup classpath and map command to class name and invoke class method:
 
-bin/zookeepers.sh
+- shell
+
+  org.jruby.Main ${HBASE_HOME}/bin/hirb.rb
+
+- master
+
+  org.apache.hadoop.hbase.master.HMaster
+
+- regionserver
+
+  org.apache.hadoop.hbase.regionserver.HRegionServer
+
+- thrift
+
+  org.apache.hadoop.hbase.thrift.ThriftServer
+
+- rest
+
+  org.apache.hadoop.hbase.rest.Main
+
+- avro
+
+  org.apache.hadoop.hbase.avro.AvroServer
+
+- migrate
+
+  org.apache.hadoop.hbase.util.Migrate
+
+- hbck
+
+  org.apache.hadoop.hbase.util.HBaseFsck
+
+- zookeeper
+
+  org.apache.hadoop.hbase.zookeeper.HQuorumPeer
+
+- zkcli
+
+  org.apache.zookeeper.ZooKeeperMain
+
 
 Main Packages
 -------------
