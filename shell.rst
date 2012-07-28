@@ -47,3 +47,11 @@ DML
 - scan
 
 - truncate
+
+debug
+=====
+
+- debug
+
+- bin/hbase shell -d
+
