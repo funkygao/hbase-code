@@ -23,6 +23,10 @@ Method naming
 
 - prettyPrint
 
+- isType(HMsg.Type type other)
+
+  instead of hmsg.getType().equals(xxx)
+
 
 Variable naming
 ===============
