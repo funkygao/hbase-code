@@ -12,6 +12,23 @@ hbase重要部件架构图
 RPC
 ===
 
+序列化
+------------
+
+没有通过标准的Serialize接口，而是利用org.apache.hadoop.io.Writable实现，它有2个方法：
+
+#. write(DataOutput out)
+
+    将数据写入流中，相当于系列化
+
+#. readFields(DataInput in)
+
+    从流中读出这数据实例化这个对象，相当于反序列化
+
+HBase里真正传输的是HBaseObjectWritable
+
+
+
 通信信道
 ------------
 
@@ -59,3 +76,76 @@ HConnection
                 | HMsg
                 |
              Master
+
+
+
+运行机制
+-----------
+
+.. image:: http://s12.sinaimg.cn/orignal/630c58cbtc5e5ff85fc2b&690
+    :alt: hbase client rpc stub
+
+.. image:: http://s9.sinaimg.cn/orignal/630c58cbt7a309f2464a8&690
+
+原理类似于RMI:
+
+#. client端访问RPC模块得到一个实例化RegionserverInterface接口的的代理类对象
+
+   1,2
+#. client通过代理对象访问代理机制实现的Invoker类
+
+   其中的方法invoke()调用一个call()函数建立连接，通过socket建立连接，序列化发送的数据，发送到rs
+
+   3,4
+#. HBaseClient会开启一个线程connection，监听rs的执行结果，监听到结果后反序列化，还原对象
+
+   并回复给client调用端
+
+   5,6
+
+
+
+HConnection
+-----------
+
+::
+
+    HConnection conn = HConnectionManager.getConnection();
+
+    HMasterInterface master = conn.getMaster();
+    HRegionInterface rs = conn.getHRegionConnection();
+    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
+    HRegionLocation rsLocation = conn.locateRegion();
+
+
+报文
+-------
+
+::
+
+    RegionServer1   RegionServerN
+        |                |
+         ----------------
+                |
+                | HMsg
+                |
+             Master
+
+
+-ROOT-/.META.
+=============
+
+当Region被拆分、合并或者重新分配的时候，都需要来修改这张表的内容。
+
+schema
+------
+
+它们的表结构是相同的
+
+.. image:: http://s3.sinaimg.cn/orignal/630c58cbt7a30a3ce2452&690
+
+
+locating
+--------
+
+HConnectionManager.locateRegion()
