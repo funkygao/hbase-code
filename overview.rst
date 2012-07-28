@@ -148,4 +148,58 @@ schema
 locating
 --------
 
-HConnectionManager.locateRegion()
+::
+
+    HConnectionManager.locateRegion()
+
+
+HBase shell
+===========
+
+DDL
+---
+
+- alter
+
+- create
+
+- describe
+
+- disable
+
+- drop
+
+- enable
+
+- exists
+
+- list
+
+DML
+---
+
+- count
+
+- delete
+
+- deleteall
+
+- get
+
+- get_counter
+
+- incr
+
+- put
+
+- scan
+
+- truncate
+
+debug
+-----
+
+- debug
+
+- bin/hbase shell -d
+
