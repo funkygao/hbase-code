@@ -9,6 +9,18 @@ hbase重要部件架构图
 .. section-numbering::
 
 
+base classes
+============
+
+HBaseConfiguration
+------------------
+
+::
+
+    addResource('hbase-default.xml');
+    addResource('hbase-site.xml);
+
+
 RPC
 ===
 
