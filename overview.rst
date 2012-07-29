@@ -8,9 +8,18 @@ hbase重要部件架构图
 .. contents:: Table Of Contents
 .. section-numbering::
 
+基础类
+================
 
-base classes
-============
+- HLog
+
+- HRegion
+
+- HMsg
+
+
+关键类说明
+=================
 
 HBaseConfiguration
 ------------------
@@ -20,6 +29,53 @@ HBaseConfiguration
     addResource('hbase-default.xml');
     addResource('hbase-site.xml);
 
+
+HLog
+----
+
+它是一个Sequence file，由一个文件头 ＋ 一条条HLog.Entry构成。
+
+.. image:: http://s3.sinaimg.cn/orignal/630c58cbtc5effc295e52&690
+    :alt: hadoop sequence file header
+
+- 每个rs只有1个HLog
+
+- reader/writer
+
+  - SequenceFileLogWriter
+
+  - SequenceFileLogReader
+
+
+- writer只有append(HLog.Entry entry)操作
+
+  HLog file = file header + [entry, ...]
+
+- HRegionServer.instantiateHLog
+
+- HLog.Entry
+
+  ::
+
+                     1
+                     --- WALEdit◇----KeyValue[]
+                    |  
+    HLog.Entry◇-----|
+              1     |
+                     --- HLogKey
+                     1
+
+
+RegionServerTracker
+-------------------
+
+rs down了，zk会调用RegionServerTracker.nodeDeleted()
+
+
+CompactSplitThread
+------------------
+
+MajorCompactionChecker
 
 RPC
 ===
@@ -215,3 +271,6 @@ debug
 
 - bin/hbase shell -d
 
+- LocalHBaseCluster
+
+  set breakpoints on this file
