@@ -38,3 +38,9 @@ Related classes
 - StoreFile
 
 - HRegion
+
+- ReadWriteConsistencyControl
+
+  实现了MVCC，基于行的数据一致性
+
+  Readers can read without having to wait for writers. Writers do need to wait for other writers to complete before they can continue.
