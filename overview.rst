@@ -17,6 +17,43 @@ hbase重要部件架构图
 
 - HMsg
 
+- HServerInfo
+
+- CatalogTracker
+
+  - RootRegionTracker
+
+  - MetaNodeTracker
+
+- RPC
+
+  - HBaseClient
+
+    ::
+
+                                                 1
+                                                -- Socket
+                                               |
+        HBaseClient ◇---- Connection(Thread) ◇-|
+                    1   *                    1 | *
+                                                -- Call
+
+  - `HBaseServer`
+
+    HBaseServer server = HBaseRPC.getServer();
+
+    ::
+
+
+                         - Call
+        HBaseServer ----|- Listener(Thread)
+                        |- Reader(Runnable)
+                        |- Responder(Thread)
+                        |- Connection
+                        |- Handler(Thread)
+
+        
+
 
 关键类说明
 =================
