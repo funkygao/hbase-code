@@ -173,6 +173,8 @@ Config
 ------
 org.apache.hadoop.hbase.HBaseConfiguration
 
+It will read hbase-default.xml then hbase-site.xml using the current Java classpath.
+
 
 Logs
 ====
