@@ -283,6 +283,23 @@ Filter
             RowFilter ValueFilter FamilyFilter QualifierFilter
 
 
+Coprocessor
+===========
+::
+
+
+                   - RegionObserver
+    Coprocessor --|- MasterObserver
+                   - WALObserver
+
+
+                              - MasterCoprocessorEnvironment
+    CoprocessorEnvironment --|- RegionCoprocessorEnvironment
+                              - WALCoprocessorEnvironment
+
+                       - MasterCoprocessorHost
+    CoprocessorHost --|- RegionCoprocessorHost
+                       - WALCoprocessorHost
 
 
 HBase shell
