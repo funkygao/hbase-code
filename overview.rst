@@ -258,6 +258,27 @@ locating
     HConnectionManager.locateRegion()
 
 
+Filter
+======
+
+::
+
+            Filter
+              |
+              |
+            FilterBase
+              |
+              |---------------------------------------------------------
+              |                 |                   |                   |
+            CompareFilter  FirstKeyOnlyFilter  ColumnPrefixFilter  ColumnPaginationFilter
+              |
+              |--------------------------------------
+              |           |           |              |
+            RowFilter ValueFilter FamilyFilter QualifierFilter
+
+
+
+
 HBase shell
 ===========
 
