@@ -264,13 +264,18 @@ Filter
 ::
 
             Filter
-              |
+              ^
               |
             FilterBase
-              |
+              ^
               |---------------------------------------------------------
               |                 |                   |                   |
             CompareFilter  FirstKeyOnlyFilter  ColumnPrefixFilter  ColumnPaginationFilter
+              ^   ◇
+              |   |      - CompareOp                       - BinaryComparator
+              |    -----|                                 |- RegexStringComparator
+              |          - WritableByteArrayComparable <--|- SubstringComparator
+              |                                            - BinaryPrefixComparator
               |
               |--------------------------------------
               |           |           |              |
