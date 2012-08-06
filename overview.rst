@@ -117,6 +117,32 @@ MajorCompactionChecker
 RPC
 ===
 
+ 
+header
+------
+
+::
+
+    Request: client -> server
+
+    header:
+    struct {
+        char[4] magic = 'hrpc';
+        char version = 3;
+        int lenOfUserGroupInformation;
+        UserGroupInformation obj;
+    }
+
+    body:
+    HbaseObjectWritable
+
+    Response: server -> client
+    struct {
+        int id;
+    }
+
+
+    
 序列化
 ------------
 
@@ -158,6 +184,8 @@ HBase里真正传输的是HBaseObjectWritable
 
 HConnection
 -----------
+
+连接到zk和rs的抽象
 
 ::
 
@@ -237,6 +265,29 @@ HConnection
              Master
 
 
+ 
+HConnectionManager
+==================
+::
+
+    // A LRU Map of HConnectionKey -> HConnection
+    Map<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
+                             |
+                             |
+                             |
+                        HConnectionImplementation --- setupZookeeperTrackers()
+                             |
+                             |
+                             |
+                        ConcurrentHashMap<String, HRegionInterface> servers
+                        Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
+                        HMasterInterface master
+                        ZooKeeperWatcher zooKeeper
+                        MasterAddressTracker masterAddressTracker
+                        RootRegionTracker rootRegionTracker
+
+
+ 
 -ROOT-/.META.
 =============
 
