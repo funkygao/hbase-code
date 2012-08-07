@@ -420,6 +420,43 @@ Network layer
                               - ...
 
 
+Server
+------
+
+- TNonblockingServer
+
+- THsHaServer
+
+  HsHa = half sync half async
+
+- TThreadPoolServer
+
+
+
+::
+
+    
+            TServer
+                |
+              ------------------------------
+             |                              |
+            AbstractNonblockingServer   TThreadPoolServer
+                |
+              ----------------------
+             |                      |
+            THsHaServer     TNonblockingServer      
+
+
+
+                         implements
+            HBaseHandler ------------> Hbase.Iface
+                |
+                |
+                |
+                ◇
+            Hbase.Processor
+
+
 HBase shell
 ===========
 
