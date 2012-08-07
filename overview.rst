@@ -352,6 +352,33 @@ Coprocessor
     CoprocessorHost --|- RegionCoprocessorHost
                        - WALCoprocessorHost
 
+Thrift
+======
+::
+
+
+        Transport --------◇ Protocol -----------◇ Client(e.g HbaseClient)
+        ---------           --------              ------
+         |                   |
+         |- close            |- writeBool
+         |- read             |- writeByte
+         |- write            |- writeI16
+          - flush            |- writeI32
+                             |- writeI64
+                             |- writeDouble
+                             |- writeString
+                             |- readBool
+                             |- readByte
+                             |- readI16
+                             |- readI32
+                             |
+                             |- writeStructBegin
+                             |- writeStructEnd
+                             |- readStructBegin
+                             |- readStructEnd
+                             |-
+                              - ...
+
 
 HBase shell
 ===========
