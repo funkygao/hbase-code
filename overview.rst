@@ -354,7 +354,47 @@ Coprocessor
 
 Thrift
 ======
+
+Message
+-------
+
+Message types:
+
+- CALL
+
+- REPLY
+
+- EXCEPTION
+
+- ONEWAY
+
+
+Network layer
+-------------
+
 ::
+
+
+            Client                      Server
+      |  --------------              --------------  |
+      |                              Handler         |
+      |                              --------------  |
+      |  GeneratedClient             Processor       |
+      |  --------------              --------------  |
+      |  Protocol                    Protocol        |
+      V  --------------              --------------  ^
+      |  Transport                   Transport       |
+      |  --------------              --------------  |
+      |  Buffer                      Buffer          |
+      |  --------------              --------------  |
+      |  socket                      socket          |
+      |  --------------              --------------  |
+      |  NIC                         NIC             |
+         --------------              --------------
+            |                           |
+             ---------------------------
+                        network
+
 
 
         Transport --------◇ Protocol -----------◇ Client(e.g HbaseClient)
