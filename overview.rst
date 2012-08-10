@@ -457,6 +457,40 @@ Server
             Hbase.Processor
 
 
+Lease
+=====
+
+::
+
+
+
+                - getDelay()
+               |
+            Delayed                              use cases
+               ^                                 ---------
+               |     leaseExpired                    |
+            Lease ◇--------------- LeaseListener     |
+               |                        ^            |
+               |                        |            |
+               |                ----------------------------
+               |               |                            |
+               |            RowLockListener         ScannerListener
+               |               |                            |
+               |                ----------------------------
+               |                                |
+               |                                ◇
+               |                          HRegionServer    
+               ◇
+            Leasese -----> Thread
+               |
+               |- createLease()
+               |- addLease()
+               |- renewLease()
+               |- cancelLease()
+                - removeLease()
+
+
+
 HBase shell
 ===========
 
