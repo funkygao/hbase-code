@@ -271,13 +271,43 @@ HConnectionManager
 ::
 
     // A LRU Map of HConnectionKey -> HConnection
-    Map<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
+    LinkedHashMapMap<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
+                             |
+                             | new and put
+                             |                     create                    connect quorum
+                        HConnectionImplementation ◇------- ZooKeeperWatcher ◇--------------> ZooKeeper
+                             |         ◇                     |
+                             |         | create              | process zk events
+                             |         | and                 V
+                             |         | start()          Watcher
+                             |         |
+                             |       ------------------------
+                             |      |                        |
+                             |   MasterAddressTracker   rootRegionTracker
                              |
                              |
-                             |
-                        HConnectionImplementation --- setupZookeeperTrackers()
-                             |
-                             |
+                             |◇-- master = HBaseRPC.getProxy(HMasterInterface.class)
+                             |                  |
+                             |      java.lang.reflect.Proxy.newProxyInstance(new Invoker(addr))
+                             |                                                     ◇  |
+                             |                             rpc client              |  | invoke
+                             |                           --------------------------   |
+                             |                          |                             |
+                             |                          |                 ------<-----
+                             |                          |                |
+                             |                      HBaseClient --------------> call
+                             |                          ◇
+                             |                          |
+                             |                          | HbaseObjectWritable
+                             |                          |
+                             |                      Connection(Thread)
+                             |                       |  |
+                             |                       |    --- waitForWork ->- receiveResponse ---
+                             |        setupIOstreams |     |                                     |
+                             |                       |     |                                     |
+                             |                       |      ---------------<---------------------
+                             |                       |
+                             |                 socket(create,connect)
                              |
                         ConcurrentHashMap<String, HRegionInterface> servers
                         Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
