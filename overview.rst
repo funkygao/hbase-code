@@ -8,65 +8,7 @@ hbase重要部件架构图
 .. contents:: Table Of Contents
 .. section-numbering::
 
-基础类
-================
 
-- HLog
-
-- HRegion
-
-- HMsg
-
-- HServerInfo
-
-- CatalogTracker
-
-  - RootRegionTracker
-
-  - MetaNodeTracker
-
-- RPC
-
-  - HBaseClient
-
-    ::
-
-                                                 1
-                                                -- Socket
-                                               |
-        HBaseClient ◇---- Connection(Thread) ◇-|
-                    1   *                    1 | *
-                                                -- Call
-
-  - `HBaseServer`
-
-    The RPC server.
-
-    HBaseServer server = HBaseRPC.getServer();
-
-    ::
-
-
-                                                     1
-                                                    -- acceptChannel --- bind
-                           1                   1   |
-        HBaseServer ◇---|--- Listener(Thread) ◇----|-- Reader(Runnable)
-                        |                          | *      |
-                        |                          |        ^ execute
-                        |                          |        |
-                        |                           -- readPool(newFixedThreadPool)
-                        |                            1
-                        |                        
-                        |  1                    
-                        |--- Responder(Thread)
-                        |
-                        |  *
-                        |--- Handler(Thread)
-                        |
-                        |--- Connection
-                         --- Call
-
-        
 ZooKeeper
 =========
 
@@ -77,45 +19,63 @@ ZooKeeper
 ::
 
 
-           [subject]
-        ZooKeeperWatcher ---                
-                |           |---- registerListener(ZooKeeperListener)
-                |           |
-                |           |   1            connect
-                |           |◇--- ZooKeeper ---------> zk quorum ====> zk cluster
-         notify |           |        |
-                |           |        | watch(notify)
-                |           |        V
-                |            ---- process(WatchedEvent) 
-                |                    |
-                |-------<------------
-                |
-        ------------------------------------------------------------------- observer pattern
-                |
-                V
-           [observer]
-        ZooKeeperListener -----
-                ^              |- nodeCreated
-                |              |- nodeDeleted
-         extend |              |- nodeDataChanged
-                |               - nodeChildrenChanged
-                |
-                |-----------------------------------------------------------
-                |                   |                   |                   |
-        ZooKeeperNodeTracker ActiveMasterManager RegionServerTracker AssignmentManager 
-                ^                   |                   |                   |
-         extend |                    ---------------------------------------
+           [subject]--------------------------------------------------------------------
+        ZooKeeperWatcher ---                                                            |
+                |           |---- registerListener(ZooKeeperListener)                   |
+                |           |                                                           |
+                |           |   1            connect                                    |
+                |           |◇--- ZooKeeper ---------> zk quorum => zk cluster          |
+         notify |           |        |                                                  |
+                |           |        | watch(notify)                                    |
+                |           |        V                                                  |
+                |            ---- process(WatchedEvent)                                 |
+                |                    |                                                  |
+                |-------<------------                                                   |
+                |                                                                       |
+        -------------------------------------------------------------------             |
+                |                                                                       |
+                V                                                                       |
+           [observer]                                                                   |
+        ZooKeeperListener -----                                                         |
+                ^              |- nodeCreated                                           |
+                |              |- nodeDeleted                                           |
+         extend |              |- nodeDataChanged                                       |
+                |               - nodeChildrenChanged                                   |
+                |                                                                       |
+                |-----------------------------------------------------------            |
+                |                   |                   |                   |           |
+        ZooKeeperNodeTracker ActiveMasterManager RegionServerTracker AssignmentManager  |
+                ^                   |                   |                   |           |
+         extend |                    ---------------------------------------            |
+                |                                                   |                   |
+                |                                                   |                   |
+                |--- MasterAddressTracker                           |                   |
+                |                                                   |                   |   
+                |--- RootRegionTracker --                           ◇                   |
+                |                        |--◇ CatalogTracker --◇ HMaster ◇--------------
+                |--- MetaNodeTracker ----                           ◇
                 |                                                   |
+                |--- ReplicationStatusTracker                       |
                 |                                                   |
-                |--- MasterAddressTracker                           |
-                |                                                   |
-                |--- RootRegionTracker --                           ◇
-                |                        |--◇ CatalogTracker --◇ HMaster
-                |--- MetaNodeTracker ----
-                |
-                |--- ReplicationStatusTracker
-                |
-                 --- ClusterStatusTracker
+                 --- ClusterStatusTracker --------------------------
+
+
+
+
+instances:
+
+============================ ======= ====== ================
+Class                        master  rs     HConnection
+============================ ======= ====== ================
+ZooKeeperWatcher             ■       ■      ■
+ActiveMasterManager          ■       □      □
+RegionServerTracker          ■       □      ■
+AssignmentManager            ■       □      □
+CatalogTracker               ■       ■      □
+ClusterStatusTracker         ■       ■      □
+MasterAddressTracker         □       ■      ■
+============================ ======= ====== ================
+
 
 
 Servers
@@ -245,6 +205,47 @@ MajorCompactionChecker
 RPC
 ===
 
+classes
+-------
+
+  - HBaseClient
+
+    ::
+
+                                                 1
+                                                -- Socket
+                                               |
+        HBaseClient ◇---- Connection(Thread) ◇-|
+                    1   *                    1 | *
+                                                -- Call
+
+  - `HBaseServer`
+
+    The RPC server.
+
+    HBaseServer server = HBaseRPC.getServer();
+
+    ::
+
+
+                                                     1
+                                                    -- acceptChannel --- bind
+                           1                   1   |
+        HBaseServer ◇---|--- Listener(Thread) ◇----|-- Reader(Runnable)
+                        |                          | *      |
+                        |                          |        ^ execute
+                        |                          |        |
+                        |                           -- readPool(newFixedThreadPool)
+                        |                            1
+                        |                        
+                        |  1                    
+                        |--- Responder(Thread)
+                        |
+                        |  *
+                        |--- Handler(Thread)
+                        |
+                        |--- Connection
+                         --- Call
  
 header
 ------
