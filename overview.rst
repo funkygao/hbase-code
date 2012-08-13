@@ -50,9 +50,51 @@ hbase重要部件架构图
                         |- Reader(Runnable)
                         |- Responder(Thread)
                         |- Connection
-                        |- Handler(Thread)
+                         - Handler(Thread)
 
         
+ZooKeeper
+=========
+
+实现了基于分布式的观察者模式，ZooKeeperWatcher是subject，ZooKeeperListener是observer
+
+每个master/rs/client process都会创建一个ZooKeeperWatcher实例
+
+::
+
+
+           [subject]
+        ZooKeeperWatcher ---                
+                |           |---- registerListener(ZooKeeperListener)
+                |           |
+                |           |   1            connect
+                |           |◇--- ZooKeeper ---------> zk quorum ====> zk cluster
+         notify |           |        |
+                |           |        | watch
+                |           |        V
+                |            ---- process(WatchedEvent) 
+                |
+        ------------------------------------------------------------------- obsever pattern
+                |
+                V
+           [observer]
+        ZooKeeperListener -----
+                ^              |- nodeCreated
+                |              |- nodeDeleted
+         extend |              |- nodeDataChanged
+                |               - nodeChildrenChanged
+                |
+                |-----------------------------------------------------------
+                |                   |                   |                   |
+        ZooKeeperNodeTracker ActiveMasterManager RegionServerTracker AssignmentManager 
+                |
+         extend |
+                |
+                |--- MasterAddressTracker
+                |--- RootRegionTracker
+                |--- MetaNodeTracker
+                |--- ReplicationStatusTracker
+                 --- ClusterStatusTracker
 
 
 关键类说明
