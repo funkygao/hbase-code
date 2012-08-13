@@ -1,6 +1,6 @@
-=========================
-hbase重要部件架构图
-=========================
+==============
+how HBase runs
+==============
 
 :Author: Gao Peng <funky.gao@gmail.com>
 :Description: internals of hbase
