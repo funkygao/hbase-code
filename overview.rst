@@ -112,11 +112,11 @@ Servers
 ::
 
 
-                    - abort          - isStopped()
-                   |                |- stop(String why)
-        Abortable -      Stoppable -
-            |               |
-             ---------------
+                    - abort                 - isStopped()
+                   |                       |- stop(String why)
+        Abortable -             Stoppable -
+            |                       |
+             -----------------------
                    ^
             extend |
                    |
