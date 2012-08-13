@@ -47,12 +47,24 @@ hbase重要部件架构图
     ::
 
 
-                         - Call
-        HBaseServer ----|- Listener(Thread)
-                        |- Reader(Runnable)
-                        |- Responder(Thread)
-                        |- Connection
-                         - Handler(Thread)
+                                                     1
+                                                    -- acceptChannel --- bind
+                           1                   1   |
+        HBaseServer ◇---|--- Listener(Thread) ◇----|-- Reader(Runnable)
+                        |                          | *      |
+                        |                          |        ^ execute
+                        |                          |        |
+                        |                           -- readPool(newFixedThreadPool)
+                        |                            1
+                        |                        
+                        |  1                    
+                        |--- Responder(Thread)
+                        |
+                        |  *
+                        |--- Handler(Thread)
+                        |
+                        |--- Connection
+                         --- Call
 
         
 ZooKeeper
@@ -681,6 +693,14 @@ DML
 - truncate
 
 
+config
+======
+
+- hbase.zookeeper.property.maxClientCnxns
+
+  Defaults 5000
+
+
 debug
 =====
 
@@ -696,13 +716,15 @@ IDE
 
 How to make hbase run step by step?
 
+- hbase.cluster.distributed
+
+- LocalHBaseCluster
+
 - HMaster
 
   - program arguments: start
 
   - set breakpoint at HMasterCommandLine.startMaster
-
-  - LocalHBaseCluster
 
 
 - HRegionServer
