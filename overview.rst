@@ -3,6 +3,7 @@ hbase重要部件架构图
 =========================
 
 :Author: Gao Peng <funky.gao@gmail.com>
+:Description: internals of hbase
 :Revision: $Id$
 
 .. contents:: Table Of Contents
