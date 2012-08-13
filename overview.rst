@@ -90,10 +90,10 @@ Servers
             |                       |
              -----------------------
                    ^
-            extend |
-                   |
-                  --------------------------------------
-                 |                                      |
+            extend |                                    HBaseRPCProtocolVersion
+                   |                                         ^
+                  --------------------------------------     | extend
+                 |                                      |    |
                 Server -                        HRegionInterface -
                         |- getConfiguration                       |- getRegionInfo(regionName)
                         |- getZooKeeper                           |- get
@@ -141,66 +141,6 @@ Servers
           HRegionServer -> (HRegionInterface,                         RegionServerServices, Server) 
 
 
-
-
-关键类说明
-=================
-
-HBaseConfiguration
-------------------
-
-::
-
-    addResource('hbase-default.xml');
-    addResource('hbase-site.xml);
-
-
-HLog
-----
-
-它是一个Sequence file，由一个文件头 ＋ 一条条HLog.Entry构成。
-
-.. image:: http://s3.sinaimg.cn/orignal/630c58cbtc5effc295e52&690
-    :alt: hadoop sequence file header
-
-- 每个rs只有1个HLog
-
-- reader/writer
-
-  - SequenceFileLogWriter
-
-  - SequenceFileLogReader
-
-
-- writer只有append(HLog.Entry entry)操作
-
-  HLog file = file header + [entry, ...]
-
-- HRegionServer.instantiateHLog
-
-- HLog.Entry
-
-  ::
-
-                     1
-                     --- WALEdit◇----KeyValue[]
-                    |  
-    HLog.Entry◇-----|
-              1     |
-                     --- HLogKey
-                     1
-
-
-RegionServerTracker
--------------------
-
-rs down了，zk会调用RegionServerTracker.nodeDeleted()
-
-
-CompactSplitThread
-------------------
-
-MajorCompactionChecker
 
 RPC
 ===
@@ -335,7 +275,7 @@ HConnection
         |                |
          ----------------
                 |
-                | HMsg
+                V HMsg
                 |
              Master
 
@@ -366,35 +306,6 @@ HConnection
    5,6
 
 
-
-HConnection
------------
-
-::
-
-    HConnection conn = HConnectionManager.getConnection();
-
-    HMasterInterface master = conn.getMaster();
-    HRegionInterface rs = conn.getHRegionConnection();
-    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
-    HRegionLocation rsLocation = conn.locateRegion();
-
-
-报文
--------
-
-::
-
-    RegionServer1   RegionServerN
-        |                |
-         ----------------
-                |
-                | HMsg
-                |
-             Master
-
-
- 
 HConnectionManager
 ==================
 ::
@@ -440,10 +351,6 @@ HConnectionManager
                              |
                         ConcurrentHashMap<String, HRegionInterface> servers
                         Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
-                        HMasterInterface master
-                        ZooKeeperWatcher zooKeeper
-                        MasterAddressTracker masterAddressTracker
-                        RootRegionTracker rootRegionTracker
 
 
  
@@ -466,6 +373,46 @@ locating
 ::
 
     HConnectionManager.locateRegion()
+
+
+
+HLog
+=================
+
+它是一个Sequence file，由一个文件头 ＋ 一条条HLog.Entry构成。
+
+.. image:: http://s3.sinaimg.cn/orignal/630c58cbtc5effc295e52&690
+    :alt: hadoop sequence file header
+
+- 每个rs只有1个HLog
+
+  而不是每个HRegion一个HLog
+
+- reader/writer
+
+  - SequenceFileLogWriter
+
+  - SequenceFileLogReader
+
+
+- writer只有append(HLog.Entry entry)操作
+
+  HLog file = file header + [entry, ...]
+
+- HRegionServer.instantiateHLog
+
+- HLog.Entry
+
+  ::
+
+                     1
+                     --- WALEdit◇----KeyValue[]
+                    |  
+    HLog.Entry◇-----|
+              1     |
+                     --- HLogKey
+                     1
+
 
 
 Filter
@@ -510,6 +457,8 @@ Coprocessor
                        - MasterCoprocessorHost
     CoprocessorHost --|- RegionCoprocessorHost
                        - WALCoprocessorHost
+
+
 
 Thrift
 ======
