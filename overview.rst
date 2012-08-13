@@ -70,11 +70,13 @@ ZooKeeper
                 |           |   1            connect
                 |           |◇--- ZooKeeper ---------> zk quorum ====> zk cluster
          notify |           |        |
-                |           |        | watch
+                |           |        | watch(notify)
                 |           |        V
                 |            ---- process(WatchedEvent) 
+                |                    |
+                |-------<------------
                 |
-        ------------------------------------------------------------------- obsever pattern
+        ------------------------------------------------------------------- observer pattern
                 |
                 V
            [observer]
@@ -87,13 +89,18 @@ ZooKeeper
                 |-----------------------------------------------------------
                 |                   |                   |                   |
         ZooKeeperNodeTracker ActiveMasterManager RegionServerTracker AssignmentManager 
+                ^                   |                   |                   |
+         extend |                    ---------------------------------------
+                |                                                   |
+                |                                                   |
+                |--- MasterAddressTracker                           |
+                |                                                   |
+                |--- RootRegionTracker --                           ◇
+                |                        |--◇ CatalogTracker --◇ HMaster
+                |--- MetaNodeTracker ----
                 |
-         extend |
-                |
-                |--- MasterAddressTracker
-                |--- RootRegionTracker
-                |--- MetaNodeTracker
                 |--- ReplicationStatusTracker
+                |
                  --- ClusterStatusTracker
 
 
