@@ -40,6 +40,8 @@ hbase重要部件架构图
 
   - `HBaseServer`
 
+    The RPC server.
+
     HBaseServer server = HBaseRPC.getServer();
 
     ::
@@ -102,6 +104,71 @@ ZooKeeper
                 |--- ReplicationStatusTracker
                 |
                  --- ClusterStatusTracker
+
+
+Servers
+=======
+
+::
+
+
+                    - abort          - isStopped()
+                   |                |- stop(String why)
+        Abortable -      Stoppable -
+            |               |
+             ---------------
+                   ^
+            extend |
+                   |
+                  --------------------------------------
+                 |                                      |
+                Server -                        HRegionInterface -
+                        |- getConfiguration                       |- getRegionInfo(regionName)
+                        |- getZooKeeper                           |- get
+                        |- getCatalogTracker                      |- put
+                         - getServerName                          |- scan
+                                                                  |- checkAndPut
+                MasterServices                                    |- increment
+                        |                                          - ...
+                        |- getAssignmentManager
+                        |- getServerManager
+                        |- getMasterFileSystem
+                        |- getExecutorService
+                         - checkTableModifiable
+              
+                HMasterInterface
+                        |
+                        |- isMasterRunning
+                        |- createTable
+                        |- addColumn
+                        |- enableTable
+                        |- shutdown
+                        |- stopMaster
+                        |- getClusterStatus
+                        |
+                        |- move(regionName, destServerName)
+                        |- assign(regionName)
+                         - balance
+              
+                HMasterRegionInterface
+                        | 
+                        |- regionServerStartup
+                         - regionServerReport
+              
+
+                RegionServerServices
+                        |
+                        |- HLog getWAL
+                        |- CompactionRequestor getCompactionRequester
+                        |- FlushRequester getFlushRequester
+                        |- HBaseRpcMetrics getRpcMetrics
+                         - HServerInfo getServerInfo
+
+
+          HMaster       -> (HMasterInterface, HMasterRegionInterface, MasterServices,       Server)
+          HRegionServer -> (HRegionInterface,                         RegionServerServices, Server) 
+
+
 
 
 关键类说明
@@ -613,13 +680,30 @@ DML
 
 - truncate
 
+
 debug
+=====
+
+shell
 -----
 
 - debug
 
 - bin/hbase shell -d
 
-- LocalHBaseCluster
+IDE 
+---
 
-  set breakpoints on this file
+How to make hbase run step by step?
+
+- HMaster
+
+  - program arguments: start
+
+  - set breakpoint at HMasterCommandLine.startMaster
+
+  - LocalHBaseCluster
+
+
+- HRegionServer
+
