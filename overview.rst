@@ -170,7 +170,7 @@ Servers
           HRegionServer -> (HRegionInterface,                         RegionServerServices, Server) 
 
 
-HMaster
+cluster
 =======
 
 ::
