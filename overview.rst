@@ -142,6 +142,66 @@ Servers
           HRegionServer -> (HRegionInterface,                         RegionServerServices, Server) 
 
 
+HMaster
+=======
+
+start
+-----
+::
+
+    HMasterCommandLine
+      |                
+      |- run               local
+          |                -----
+          |- startMaster -|     |
+                          |     |- new MiniZooKeeperCluster.startup
+                          |     |   |
+                          |     |   |- zks = new ZooKeeperServer
+                          |     |   |- new NIOServerCnxn.Factory(clientPort).startup
+                          |     |   |        |
+                          |     |   |        |- zks.startdata
+                          |     |   |        |    |
+                          |     |   |        |    |- new ZKDatabase
+                          |     |   |        |    
+                          |     |   |        |- zks.startup
+                          |     |   |             |
+                          |     |   |             |- startSessionTracker
+                          |     |   |             |- setupRequestProcessors
+                          |     |   |                   |
+                          |     |   |                   | PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+                          |     |   |                   |
+                          |     |   |                   |- new FinalRequestProcessor
+                          |     |   |                   |- new SyncRequestProcessor
+                          |     |   |                   |- new PrepRequestProcessor
+                          |     |   |
+                          |     |   |- socket connect clientPort 'stat' to assert zk alive
+                          |     |
+                          |     |
+                          |     |- new LocalHBaseCluster().startup
+                          |         |
+                          |         |- HMaster.newInstance
+                          |         |    |
+                          |         |    |- rpcServer = HBaseRPC.getServer
+                          |         |    |- rpcServer.startThreads
+                          |         |    |     |
+                          |         |    |     |- responder.start()
+                          |         |    |     |- listener.start()
+                          |         |    |     |- handlers = new Handler[handlerCount].startall()
+                          |         |    |
+                          |         |    |- new ZooKeeperWatcher
+                          |         |
+                          |         |- HRegionServer.newInstance
+                          |         |    |
+                          |         |    |- server = HBaseRPC.getServer
+                          |         |
+                          |         |- start master and rs threads
+                          |
+                          |
+                           ------------ HMaster.constructMaster(HMaster.class, conf)->start();
+                           distributed
+
+
+
 
 RPC
 ===
