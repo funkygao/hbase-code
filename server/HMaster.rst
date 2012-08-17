@@ -40,7 +40,7 @@ run
 
 ::
 
-    create ActiveMasterManager(Manager and zk listener for master election)
+    create ActiveMasterManager
           |
           |
     stallIfBackupMaster
@@ -54,12 +54,13 @@ run
           |         ------------------------|- HConnectionImplementation
           |                                 |- ExecutorService
      main thread loop                       |- ServerManager(to deal with region server info)
+                                            |
                                             |- CatalogTracker and start root/meta tracker
                                             |- AssignmentManager
                                             |- LoadBalancer
                                             |- RegionServerTracker
                                             |- ClusterStatusTracker and setClusterUp
-                                            |-
+                                            | 
                                             |- startServiceThreads
                                             |       |
                                             |       |- startExecutorService
@@ -67,9 +68,9 @@ run
                                             |        - InfoServer
                                             |       
                                             |- serverManager.waitForRegionServers
-                                            |-
+                                            | 
                                             |- assignRootAndMeta
-                                            |-
+                                            | 
                                             |- start blancer chore(runs every 5m)
                                              - start catalogJanitorChore(runs every 5m)
 
