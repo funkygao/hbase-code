@@ -13,6 +13,33 @@ how HBase runs
 ZooKeeper
 =========
 
+znode
+-----
+
+PERSISTENT
+^^^^^^^^^^
+
+- /hbase
+
+- /hbase/unassigned
+
+- /hbase/rs
+
+- /hbase/table
+
+- /hbase/root-region-server
+
+EPHEMERAL
+^^^^^^^^^
+
+
+- /hbase/master
+
+- /hbase/rs/${rs server info}
+
+arch
+----
+
 实现了基于分布式的观察者模式，ZooKeeperWatcher是subject，ZooKeeperListener是observer
 
 每个master/rs/client process都会创建一个ZooKeeperWatcher实例
@@ -145,8 +172,6 @@ Servers
 HMaster
 =======
 
-start
------
 ::
 
     HMasterCommandLine
@@ -193,6 +218,9 @@ start
                           |         |- HRegionServer.newInstance
                           |         |    |
                           |         |    |- server = HBaseRPC.getServer
+                          |         |    |- run
+                          |         |        |
+                          |         |        |- server.startThreads
                           |         |
                           |         |- start master and rs threads
                           |
@@ -222,7 +250,7 @@ classes
 
   - `HBaseServer`
 
-    The RPC server.
+    The RPC server. HMaster和HRegionServer都会创建该对象，作为成员变量
 
     HBaseServer server = HBaseRPC.getServer();
 
