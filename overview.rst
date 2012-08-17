@@ -90,7 +90,8 @@ arch
 
 
 
-instances:
+instances
+---------
 
 ============================ ======= ====== ================
 Class                        master  rs     HConnection
