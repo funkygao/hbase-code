@@ -73,13 +73,13 @@ Unit of storage: Column family
                              ---- HLog
                             |                                   N             compactionThreshold   ---------
                             |                                  ---- StoreFile -------------------> | compact |
-                   1        | N               N               |                                     ---------
-    HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|
-                            |        |                        |
-                            |        | too many rows          |
-                            |        V                        |
-                            |      -------                    |
-                            |     | split |                   |
+                   1        | N               N               |         ^                           ---------
+    HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |
+                            |        |                        |         |
+                            |        | too many rows          |         |
+                            |        V                        |          ---------------
+                            |      -------                    |                         |
+                            |     | split |                   |                         |
                             |      -------                    |                      -------
                             |                                  ---- MemStore -----> | flush |
                             | 1                                 1                    -------
