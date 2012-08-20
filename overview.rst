@@ -43,6 +43,50 @@ Overview
                            HDFS
 
 
+Queue
+=====
+
+============================================= ==================  ===============================================
+Queue name                                    Owner               desc
+============================================= ==================  ===============================================
+BlockingQueue<FlushQueueEntry> flushQueue     MemStoreFlusher     获取刷磁盘的请求，超时时间为10s
+PriorityCompactionQueue compactionQueue       CompactSplitThread  获取compact的请求，超时时间20s
+BlockingQueue<Call> callQueue                 HBaseServer         RPC server获得请求后，由Reader线程放入队列，等待Handler线程处理
+PriorityCompactionQueue compactionQueue       CompactSplitThread  获取需要Compact的HRegion
+
+
+
+Storage
+=======
+
+overview
+--------
+
+A Store holds a column family in a Region
+
+Unit of storage: Column family
+
+::
+
+                              1
+                             ---- HLog
+                            |                                   N             compactionThreshold
+                            |                                  ---- StoreFile -------------------> compact
+                            | N               N               |
+    HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|
+                            |        |                        |
+                            |        | too many rows          |
+                            |        V                        |
+                            |      split                      |
+                            |                                  ---- MemStore -----> flush
+                            | 1                                 1
+                             ---- LruBlockCache
+
+
+MemStoreFlusher
+---------------
+
+
 ZooKeeper
 =========
 
@@ -283,7 +327,7 @@ Servers
                         |
                         |- move(regionName, destServerName)
                         |- assign(regionName)
-                         - balance
+                         - balance(定时对Region Server的Region数进行balance)
               
                 HMasterRegionInterface
                         | 
@@ -389,6 +433,8 @@ classes
 
     HBaseServer server = HBaseRPC.getServer();
 
+    Reader线程接收到RPC请求后，丢到Queue里；10个Handler线程处理Queue(默认1000)
+
     ::
 
 
@@ -409,7 +455,9 @@ classes
                         |--- Handler(Thread)
                         |
                         |--- Connection
+                        |
                          --- Call
+
  
 header
 ------
