@@ -106,6 +106,56 @@ MasterAddressTracker         □       ■      ■
 ============================ ======= ====== ================
 
 
+Event handler
+=============
+
+intro
+-----
+
+Hbase通过event的方式(command pattern)，利用ExecutorService执行各种命令，例如:
+::
+
+    new ExecutorService.submit(new CloseRootHandler)
+
+
+ExecutorService
+---------------
+利用java.util.concurrent.ThreadPoolExecutor
+
+
+classes
+-------
+
+::
+
+        Runnable
+          ^                1
+          |                --- EventType
+          |               |1
+        EventHandler ◇----|--- EventHandlerListener
+          ^               |
+          |               |--- Server
+          |               |
+          |                --- seqid
+          |                
+          |                
+          |          master   - CloseRegionHandler
+          |         ---------|- DeleteTableHanler
+           --------|         |- DisableTableHandler
+                   |         |- EnableTableHandler
+                   |         |- MetaServerShutdownHandler
+                   |         |- ModifyTableHandler
+                   |         |- OpenRegionHandler
+                   |          - ....
+                   |          
+                   | rs       - CloseMetaHandler
+                    ---------|- CloseRegionHandler
+                             |- CloseRootHandler
+                             |- OpenMetaHandler
+                             |- OpenRegionHandler
+                             |- OpenRootHandler
+                              - ...
+
 
 Servers
 =======
