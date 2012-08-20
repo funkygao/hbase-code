@@ -65,16 +65,21 @@ overview
 
 A Store holds a column family in a Region
 
-Unit of storage: Column family
+每个 HColumnFamily 有个 Store 实例
 
 ::
 
-                              1
-                             ---- HLog
-                            |                                   N             compactionThreshold   ---------
+
+                                                            HFile.Reader  HFile.Writer
+                                                                   |        |   
+                                                                    --------    
+                              1                                         |
+                             ---- HLog(WAL)                             |
+                            |                                   N       ◇     compactionThreshold   ---------
                             |                                  ---- StoreFile -------------------> | compact |
                    1        | N               N               |         ^                           ---------
     HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |
+                            |        |      cf                |         |
                             |        |                        |         |
                             |        | too many rows          |         |
                             |        V                        |          ---------------
@@ -628,6 +633,13 @@ HConnectionManager
  
 -ROOT-/.META.
 =============
+
+一个新的客户端为找到某个特定的行 key 首先需要联系 Zookeeper Qurom。
+它会从ZooKeeper检索持有 -ROOT- region的服务器名。通过这个信息,它询问拥有 -ROOT- region的region server,得到持有对应行key的.META. 表 region 的服务器名。
+
+这两个操作的结果都会被缓存下来,因此只需要查找一次。 
+
+最后,它就可以查询.META.服务器然后检索到包含给定行 key 的 region 所在的服务器。
 
 当Region被拆分、合并或者重新分配的时候，都需要来修改这张表的内容。
 
