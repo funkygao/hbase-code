@@ -9,6 +9,39 @@ how HBase runs
 .. contents:: Table Of Contents
 .. section-numbering::
 
+Overview
+========
+
+::
+
+    
+                        HMasterInterface HBaseRPC.getProxy
+            --------------------------------------------------------------------
+           |                                                                    |
+           |    MasterAddressTracker                                            |
+           |    RootRegionTracker                                               |
+        Client -----------------------> ZooKeeper                               |
+           |                              ^   ^                                 |
+           | HRegionInterface             |   |                                 |
+           | HBaseRPC.waitForProxy        |   |                                 |
+           |                              |   |                                 |
+           |   ---------------------------     ----                             |
+           |  |                                    | ActiveMasterManager        |
+           |  |                                    | ActiveMasterManager        |
+           |  |                                    | AssignmentManager          |
+           |  | CatalogTracker                     | CatalogTracker             |
+           |  | ClusterStatusTracker               | ClusterStatusTracker       |
+           |  | MasterAddressTracker               |                            |
+           |  |                                    |                            |
+           V  |            HMsg                    |                            |
+        RegionServer -------------------------> Master <------------------------
+           |           HMasterRegionInterface      |
+           |                                       |
+            ---------------------------------------
+                            |
+                            V
+                           HDFS
+
 
 ZooKeeper
 =========
