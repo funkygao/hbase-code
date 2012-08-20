@@ -86,9 +86,6 @@ Unit of storage: Column family
                              ---- LruBlockCache
 
 
-MemStoreFlusher
----------------
-
 
 ZooKeeper
 =========
