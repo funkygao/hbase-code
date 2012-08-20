@@ -27,6 +27,10 @@ Method naming
 
   instead of hmsg.getType().equals(xxx)
 
+- createAndFailSilent
+
+  try {} catch (Exception e) { // noop }
+
 
 Variable naming
 ===============

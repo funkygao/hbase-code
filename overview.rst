@@ -21,21 +21,45 @@ PERSISTENT
 
 - /hbase
 
+  baseZNode, base znode for this cluster
+
 - /hbase/unassigned
+
+  assignmentZNode, znode used for region transitioning and assignment
+
+  see ZKAssign
+
+- /hbase/shutdown
+
+  clusterStateZNode, znode containing the current cluster state
 
 - /hbase/rs
 
+  rsZNode
+
 - /hbase/table
 
+  tableZNode, znode used for table disabling/enabling
+
+  该目录下的每个child node表示一个disabled table
+
 - /hbase/root-region-server
+
+  rootServerZNode
+
 
 EPHEMERAL
 ^^^^^^^^^
 
-
 - /hbase/master
 
+  masterAddressZNode, znode of currently active master
+
 - /hbase/rs/${rs server info}
+
+  znode containing ephemeral nodes of the regionservers
+
+  每个rs下的node name为：${rsHostName},${rsPort},${rsStartcode}, data为：address.toBytes
 
 arch
 ----
@@ -48,6 +72,7 @@ arch
 
 
            [subject]--------------------------------------------------------------------
+        (Acts as the single ZooKeeper Watcher)                                          |
         ZooKeeperWatcher ---                                                            |
                 |           |---- registerListener(ZooKeeperListener)                   |
                 |           |                                                           |
@@ -108,6 +133,8 @@ MasterAddressTracker         □       ■      ■
 
 Event handler
 =============
+
+用于局部内的调用，不属于整体的架构范畴
 
 intro
 -----
