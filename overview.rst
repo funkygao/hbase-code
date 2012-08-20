@@ -71,16 +71,18 @@ Unit of storage: Column family
 
                               1
                              ---- HLog
-                            |                                   N             compactionThreshold
-                            |                                  ---- StoreFile -------------------> compact
-                            | N               N               |
+                            |                                   N             compactionThreshold   ---------
+                            |                                  ---- StoreFile -------------------> | compact |
+                   1        | N               N               |                                     ---------
     HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|
                             |        |                        |
                             |        | too many rows          |
                             |        V                        |
-                            |      split                      |
-                            |                                  ---- MemStore -----> flush
-                            | 1                                 1
+                            |      -------                    |
+                            |     | split |                   |
+                            |      -------                    |                      -------
+                            |                                  ---- MemStore -----> | flush |
+                            | 1                                 1                    -------
                              ---- LruBlockCache
 
 
