@@ -33,6 +33,8 @@ PERSISTENT
 
   clusterStateZNode, znode containing the current cluster state
 
+  znode值是Bytes.toBytes(new java.util.Date().toString())，启动时间
+
 - /hbase/rs
 
   rsZNode
@@ -72,7 +74,6 @@ arch
 
 
            [subject]--------------------------------------------------------------------
-        (Acts as the single ZooKeeper Watcher)                                          |
         ZooKeeperWatcher ---                                                            |
                 |           |---- registerListener(ZooKeeperListener)                   |
                 |           |                                                           |
@@ -114,21 +115,44 @@ arch
 
 
 
+RootRegionTracker
+-----------------
+
+- HServerAddress getRootRegionLocation()
+
+- HServerAddress waitRootRegionLocation(long timeout)
+
+MetaNodeTracker
+---------------
+
+::
+
+    nodeDeleted -> this.catalogTracker.waitForMetaServerConnectionDefault()
+
+
+MetaEditor
+^^^^^^^^^^
+
+Writes region and assignment information to .META.
+
+MetaReader
+^^^^^^^^^^
+
 
 instances
 ---------
 
-============================ ======= ====== ================
-Class                        master  rs     HConnection
-============================ ======= ====== ================
-ZooKeeperWatcher             ■       ■      ■
-ActiveMasterManager          ■       □      □
-RegionServerTracker          ■       □      ■
+============================ ======= ====== ============ ===============================================
+Class                        master  rs     HConnection  desc
+============================ ======= ====== ============ ===============================================
+ZooKeeperWatcher             ■       ■      ■            Acts as the single ZooKeeper Watcher
+ActiveMasterManager          ■       □      □            master选举机制的实现 blockUntilBecomingActiveMaster()
+RegionServerTracker          ■       □      □            Tracks the online region servers expiration. serverManager.expireServer, getOnlineServers()
 AssignmentManager            ■       □      □
-CatalogTracker               ■       ■      □
-ClusterStatusTracker         ■       ■      □
-MasterAddressTracker         □       ■      ■
-============================ ======= ====== ================
+CatalogTracker               ■       ■      □            Tracks the availability of the catalog tables -ROOT- and .META.
+ClusterStatusTracker         ■       ■      □            标识当前cluster是启动还是关闭状态。master设置状态setClusterUp()/setClusterDown(), rs读状态isClusterUp()
+MasterAddressTracker         □       ■      ■            追踪当前的master，这样当master切换时客户端和rs都自动切换 getMasterAddress()
+============================ ======= ====== ============ ===============================================
 
 
 Event handler
@@ -532,6 +556,51 @@ schema
 它们的表结构是相同的
 
 .. image:: http://s3.sinaimg.cn/orignal/630c58cbt7a30a3ce2452&690
+
+HTableDescriptor.ROOT_TABLEDESC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+        new HTableDescriptor(
+            "-ROOT-", // table name
+            new HColumnDescriptor[] { 
+                new HColumnDescriptor (
+                    "info",  // family name
+                    10,  // max versions
+                    Compression.Algorithm.NONE.getName(), // compression
+                    true, // inMemory
+                    true,  // blockCacheEnabled
+                    8 * 1024, // blocksize
+                    HConstants.FOREVER, // ttl
+                    StoreFile.BloomType.NONE.toString(), // bloomFilter
+                    HConstants.REPLICATION_SCOPE_LOCAL //scope
+                ) 
+            }
+        );
+
+
+HTableDescriptor.META_TABLEDESC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+        new HTableDescriptor(
+            ".META.", // table name
+            new HColumnDescriptor[] { 
+                new HColumnDescriptor (
+                    "info",  // family name
+                    10,  // max versions
+                    Compression.Algorithm.NONE.getName(), // compression
+                    true, // inMemory
+                    true,  // blockCacheEnabled
+                    8 * 1024, // blocksize
+                    HConstants.FOREVER, // ttl
+                    StoreFile.BloomType.NONE.toString(), // bloomFilter
+                    HConstants.REPLICATION_SCOPE_LOCAL //scope
+                ) 
+            }
+        );
 
 
 locating
