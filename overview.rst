@@ -174,7 +174,7 @@ Configuration
 
   default 1m
 
-
+- hbase.hregion.max.filesize
 
 Data lookup
 -----------
@@ -192,6 +192,27 @@ Data lookup
         connect to key's rs server
             |
         open the key's HRegion
+
+
+Region splits
+-------------
+
+::
+
+        (parent) region split into 2
+            |
+        mkdir /hbase/${table}/${regionName}/splits/
+            |
+        close parent region (no longer take requests)A
+            |
+        prepare 2 daughters in splits/
+            |           |
+            |           |- mkdir 2 ${daughterDir}
+            |            - reference file
+            |            
+        mv ${daughterDir} ../
+            |            
+        update .META. table
 
 
 ZooKeeper
