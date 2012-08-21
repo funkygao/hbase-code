@@ -67,29 +67,131 @@ A Store holds a column family in a Region
 
 每个 HColumnFamily 有个 Store 实例
 
+TODO merge behavior
+
 ::
 
 
-                                                            HFile.Reader  HFile.Writer
-                                                                   |        |   
+                                                                    KeyValue
                                                                     --------    
-                              1                                         |
-                             ---- HLog(WAL)                             |
-                            |                                   N       ◇     compactionThreshold   ---------
+                                                                   |        |   
+             WALEdit -  entry                               HFile.Reader  HFile.Writer
+                      |------ SequenceFile                         |        |   
+             HLogKey -             |                                --------    
+                              1    |             ------                 |
+                             ---- HLog(WAL) --- | roll |                |
+                            |     128M           ------                 |     
+                            |                   LogRoller       N       ◇     compactionThreshold   ---------
                             |                                  ---- StoreFile -------------------> | compact |
                    1        | N               N               |         ^                           ---------
-    HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |
+    HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |                         CompactSplitThread
                             |        |      cf                |         |
                             |        |                        |         |
                             |        | too many rows          |         |
                             |        V                        |          ---------------
                             |      -------                    |                         |
                             |     | split |                   |                         |
-                            |      -------                    |                      -------
+                            |      -------                    |               64M    -------
                             |                                  ---- MemStore -----> | flush |
                             | 1                                 1                    -------
-                             ---- LruBlockCache
+                             ---- LruBlockCache                                     MemStoreFlusher
 
+
+Physical storage
+----------------
+
+- HDFS
+
+  - HLog
+
+  - HFile
+
+- mem
+
+  - memstore
+
+- .tableinfo
+
+  ..tableinfo.0000000001.crc
+
+- .regioninfo
+
+  ..regioninfo.crc
+
+
+HDFS
+----
+
+::
+
+    /hbase
+      |
+      |-- -ROOT-/
+      |-- .META./
+      |
+      |-- .logs/ ---
+      |             |
+      |              -- ${rsServer}/ ---
+      |                                 |
+      |                                  - HLog files
+      |-- .oldlogs/
+      |
+      |-- .corrupt/
+      |-- splitlog/
+      |
+      |-- hbase.id(the uniq id of the cluster for internal usage)
+      |-- hbase.version
+      |
+       -- ${tableName}/ ---
+                           |-- .tableinfo (HTableDescriptor)
+                           |-- .tmp/
+                           |
+                            -- ${md5RegionName}/ ---
+                                                    |-- .regioninfo (HRegionInfo)
+                                                    |-- .tmp/
+                                                    |
+                                                     -- ${cfName}/ ---
+                                                                      |
+                                                                       - HFiles with random name without conflict
+
+
+Configuration
+-------------
+
+- hbase.hregion.preclose.flush.size
+
+  default 5M
+
+- hbase.hregion.memstore.flush.size
+
+  default 64M
+
+- hbase.master.logcleaner.ttl
+
+  default 10m
+
+- hbase.master.cleaner.interval
+
+  default 1m
+
+
+
+Data lookup
+-----------
+
+::
+
+        client ask for data with row(key)
+            |
+        ZK Quorum
+            |
+        Get the 1 -ROOt- rs address
+            |
+        Get the key's .META. rs address
+            |
+        connect to key's rs server
+            |
+        open the key's HRegion
 
 
 ZooKeeper
