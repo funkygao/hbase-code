@@ -19,6 +19,11 @@ TODO
 
 - hadoop TFile
 
+Notes
+=====
+
+Scan 是通过 RegionScanner 实现的，它会为每个 Store 实例执行 StoreScanner 检索
+
 
 Overview
 ========
@@ -76,7 +81,7 @@ overview
 
 A Store holds a column family in a Region
 
-每个 HColumnFamily 有个 Store 实例
+每个 Store 实例代表一个HColumnFamily
 
 TODO merge behavior
 
@@ -336,15 +341,21 @@ PERSISTENT
 
   see ZKAssign
 
+  该znode是由 AssignmentManager 用来追踪整个cluster的region状态的，它包含了那些未被打开或者处于过渡状态的 regions 对应的 znodes，zodes 的名称就是该 region 的 hash
+
 - /hbase/shutdown
 
   clusterStateZNode, znode containing the current cluster state
+
+  用来追踪cluster status，当cluster关闭时内容为空
 
   znode值是Bytes.toBytes(new java.util.Date().toString())，启动时间
 
 - /hbase/rs
 
   rsZNode
+
+  所有region servers的根结点，会记录它们是何时启动的，用来追踪服务器的失败
 
 - /hbase/table
 
@@ -455,7 +466,7 @@ Class                        master  rs     HConnection  desc
 ZooKeeperWatcher             ■       ■      ■            Acts as the single ZooKeeper Watcher
 ActiveMasterManager          ■       □      □            master选举机制的实现 blockUntilBecomingActiveMaster()
 RegionServerTracker          ■       □      □            Tracks the online region servers expiration. serverManager.expireServer, getOnlineServers()
-AssignmentManager            ■       □      □
+AssignmentManager            ■       □      □            记下 region 从 offline 状态开始的整个生命周期
 CatalogTracker               ■       ■      □            Tracks the availability of the catalog tables -ROOT- and .META.
 ClusterStatusTracker         ■       ■      □            标识当前cluster是启动还是关闭状态。master设置状态setClusterUp()/setClusterDown(), rs读状态isClusterUp()
 MasterAddressTracker         □       ■      ■            追踪当前的master，这样当master切换时客户端和rs都自动切换 getMasterAddress()
@@ -638,7 +649,14 @@ cluster
                            distributed
 
 
+Replication
+===========
 
+HBase replication是在不同的HBase部署之间拷贝数据的一种方式。
+
+它可以作为一种灾难恢复解决方案, 也可以用于提供 HBase 层的更高的可用性
+
+采用与mysql replication类似的 master push架构
 
 RPC
 ===
@@ -858,6 +876,27 @@ HConnectionManager
  
 -ROOT-/.META.
 =============
+
+-ROOT-表用于保存.META.表的所有 regions 的信息。
+
+三层的类 B+Tree 的定位模式
+
+::
+
+        zk quorum 
+            |
+            | /hbase/root-region-server
+            |
+        1. found the rs of -ROOT-
+            |
+        connect to the root rs
+            |
+        2. found the .META. from the -ROOT-
+            |
+        3. find the target rs from .META.
+            |
+        connect to the target rs
+
 
 一个新的客户端为找到某个特定的行 key 首先需要联系 Zookeeper Qurom。
 它会从ZooKeeper检索持有 -ROOT- region的服务器名。通过这个信息,它询问拥有 -ROOT- region的region server,得到持有对应行key的.META. 表 region 的服务器名。
