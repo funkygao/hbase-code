@@ -9,6 +9,17 @@ how HBase runs
 .. contents:: Table Of Contents
 .. section-numbering::
 
+
+TODO
+====
+
+- KeyValue
+
+- HFile
+
+- hadoop TFile
+
+
 Overview
 ========
 
@@ -97,6 +108,20 @@ TODO merge behavior
                              ---- LruBlockCache                                     MemStoreFlusher
 
 
+Compaction
+----------
+
+每次memstore flush，都会产生一个HFile，如果很多，就会compaction，把它们合成更少更大的HFile，当该HFile大到一定程度，则会产生region split
+
+- minior
+
+  把 最少hbase.hstore.compaction.min/最多hbase.hstore.compaction.max 个HFile合并成1个HFile，这些HFile每个大小要在 hbase.hstore.compaction.min.size 和 hbase.hstore.compaction.max.size 范围之间才会合并
+
+- major
+
+  把所有HFile合并成1个HFile
+
+
 Physical storage
 ----------------
 
@@ -117,6 +142,23 @@ Physical storage
 - .regioninfo
 
   ..regioninfo.crc
+
+
+HFile
+-----
+
+It's based upon hadoop TFile
+
+该文件是变长的，定长的block只有file into和trailer这2部分
+
+data blocks, meta blocks, file info, data index blocks, meta index blocks, trailer
+
+shell$ bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -p -m -f filename
+
+::
+
+    open HFile
+    seek to end with offset trailer size
 
 
 HDFS
@@ -175,6 +217,20 @@ Configuration
   default 1m
 
 - hbase.hregion.max.filesize
+
+- hbase.hstore.compaction.min
+
+  default 3
+
+- hbase.hstore.compaction.min.size
+
+- hbase.hstore.compaction.max
+
+  default 10
+
+- hbase.hstore.compaction.max.size
+
+  default Long.MAX_VALUE
 
 Data lookup
 -----------
