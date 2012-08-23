@@ -89,12 +89,14 @@ TODO merge behavior
              WALEdit -  entry                               HFile.Reader  HFile.Writer
                       |------ SequenceFile                         |        |   
              HLogKey -             |                                --------    
-                              1    |             ------                 |
+                                   |     LogSyncer                      |
+                                   |         |                          |
+                              1    |         |   ------                 |
                              ---- HLog(WAL) --- | roll |                |
                             |     128M           ------                 |     
                             |                   LogRoller       N       ◇     compactionThreshold   ---------
                             |                                  ---- StoreFile -------------------> | compact |
-                   1        | N               N               |         ^                           ---------
+                   1        | N               N               |         ^        HFile              ---------
     HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |                         CompactSplitThread
                             |        |      cf                |         |
                             |        |                        |         |
@@ -232,6 +234,10 @@ Configuration
 
   default Long.MAX_VALUE
 
+- hbase.regionserver.logroll.period
+
+  default 1h
+
 Data lookup
 -----------
 
@@ -248,6 +254,46 @@ Data lookup
         connect to key's rs server
             |
         open the key's HRegion
+
+
+put
+---
+
+::
+
+        client ask for kv put with row(key)
+            |
+        ZK Quorum
+            |
+        Get the 1 -ROOt- rs address
+            |
+        Get the key's .META. rs address
+            |
+        connect to key's rs server
+            |
+            | RPC
+            |
+        HRegionServer
+            |
+        locate the row's HRegion
+            |
+        write to WAL
+            |
+        write to MemStore ------- MemStoreFlusher --
+                                                    |
+                     -------------------------------
+                    |
+           --------------------
+          |     |       |      |
+        HFile  HFile  HFile  HFile
+           --------------------
+                   |
+                   | CompactSplitThread
+                   |
+           --------------------
+          |     |       |      |
+           --------------------
+                 HFile
 
 
 Region splits
@@ -922,6 +968,11 @@ HLog
                      1
 
 
+因为KeyValue仅表示了row key,column family,column qualifier,timestamp,type 和 value;
+这样就需要有地方存放 KeyValue 的归属信息,比如 region 和 table 名称。
+这些信息会被存储在 HLogKey 中
+
+通过将针对多个 cells 的更新操作包装到一个单个 WALEdit 实例中,将所有的更新看做是一个原子性的操作
 
 Filter
 ======
