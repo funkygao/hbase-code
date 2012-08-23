@@ -879,6 +879,8 @@ HConnectionManager
 
 -ROOT-表用于保存.META.表的所有 regions 的信息。
 
+.META.表存储row range位置信息
+
 三层的类 B+Tree 的定位模式
 
 ::
