@@ -111,7 +111,7 @@ TODO merge behavior
                             |     | split |                   |                         |
                             |      -------                    |               64M    -------
                             |                                  ---- MemStore -----> | flush |
-                            | 1                                 1                    -------
+                            | 1                                 1   SortedMap        -------
                              ---- LruBlockCache                                     MemStoreFlusher
 
 
@@ -195,8 +195,8 @@ HDFS
                            |-- .tableinfo (HTableDescriptor)
                            |-- .tmp/
                            |
-                            -- ${md5RegionName}/ ---
-                                                    |-- .regioninfo (HRegionInfo)
+                            -- ${h(RegionName)}/ ---
+                                 Jenkins Hash       |-- .regioninfo (HRegionInfo)
                                                     |-- .tmp/
                                                     |
                                                      -- ${cfName}/ ---
