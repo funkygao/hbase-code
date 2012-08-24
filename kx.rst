@@ -30,34 +30,35 @@ arch
 
                                 HAProxy
                                    |
-                                   | dispatch
-                                   |
                      ---------------------------
                     |                           |
                 web server1                web serverN...
              -------------------         -------------------
             |   apache mod_php  |       | apache mod_php    |
-            |    |              |       |   |               |
-            |    | socket       |       |   |               |
-            |    | transport    |       |   |               |
-            |    | protocol     |       |   |               |
-            |    | HbaseClient  |       |   |               |
-            |    |              |       |   |               |
+            |    |              |       |                   |
+            |    | socket       |       |                   |
+            |    | transport    |  ...  |                   |
+            |    | protocol     |       |                   |
+            |    | HbaseClient  |       |                   |
+            |    |              |       |                   |
              -------------------         -------------------
                  |                          |
-                 |                          |
+                 |  in-house load balancer  |
+                  --------------------------
+                              |
                ---------------------------------
               |       ThriftServer cluster      |
+              |       usually reside on some rs |
                ---------------------------------
-                 |                          |
-                 |                          |       (hadoop + hbase) cluster
-           -----------------------------------------------------------------
-          |                                                                 |
-          |  zk cluster     master  standbyMaster  rs+dataNode  nameNode    |
-          |  ----------     ------  -------------  -----------  --------    |
-          |                   |           |          |     |       |        |
-          |                    ----------------------       -------         |
-          |                            HBase                hadoop          |
-           -----------------------------------------------------------------
+                              |              
+                              |                     (hadoop + hbase [thrift]) cluster
+           --------------------------------------------------------------------------
+          |                                                                          |
+          |  zk cluster     master  standbyMaster  rs+dataNode+[thrift]  nameNode    |
+          |  ----------     ------  -------------  --------------------  --------    |
+          |                   |           |          |      |       |       |        |
+          |                    ----------------------       |        -------         |
+          |                            HBase           ThriftServer  hadoop          |
+           --------------------------------------------------------------------------
 
 
