@@ -10,3 +10,50 @@ kx how to use HBase
 .. section-numbering::
 
 
+use case
+========
+
+动态
+---------
+
+
+短消息
+---------
+
+
+
+arch
+====
+
+::
+
+
+                                HAProxy
+                                   |
+                                   | dispatch
+                                   |
+                     ---------------------------
+                    |                           |
+                web server1                web serverN...
+             -------------------         -------------------
+            |   apache mod_php  |       | apache mod_php    |
+            |    |              |       |   |               |
+            |    | socket       |       |   |               |
+            |    V transport    |       |   V               |
+            |    | protocol     |       |   |               |
+            |    | HbaseClient  |       |   |               |
+            |    |              |       |   |               |
+            |   ThriftServer    |       | ThriftServer      |
+             -------------------         -------------------
+                 |                          |
+                 |                          |       (hadoop + hbase) cluster
+           -----------------------------------------------------------------
+          |                                                                 |
+          |  zk cluster     master  standbyMaster  rs+dataNode  nameNode    |
+          |  ----------     ------  -------------  -----------  --------    |
+          |                   |           |          |     |       |        |
+          |                    ----------------------       -------         |
+          |                            HBase                hadoop          |
+           -----------------------------------------------------------------
+
+
