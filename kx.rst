@@ -39,12 +39,16 @@ arch
             |   apache mod_php  |       | apache mod_php    |
             |    |              |       |   |               |
             |    | socket       |       |   |               |
-            |    V transport    |       |   V               |
+            |    | transport    |       |   |               |
             |    | protocol     |       |   |               |
             |    | HbaseClient  |       |   |               |
             |    |              |       |   |               |
-            |   ThriftServer    |       | ThriftServer      |
              -------------------         -------------------
+                 |                          |
+                 |                          |
+               ---------------------------------
+              |       ThriftServer cluster      |
+               ---------------------------------
                  |                          |
                  |                          |       (hadoop + hbase) cluster
            -----------------------------------------------------------------
