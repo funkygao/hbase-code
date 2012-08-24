@@ -133,6 +133,8 @@ Main Packages
        |
        |- ipc
        |
+       |- mapreduce(通过mapreduce实现运维工具)
+       |
        |- master
        |   |
        |   |- HMaster
