@@ -115,6 +115,24 @@ TODO merge behavior
                              ---- LruBlockCache                                     MemStoreFlusher
 
 
+
+
+
+    client          rs          WAL         memstore        HFile
+      |             |            |              |             |
+      | Put/Delete  |            |              |             |
+      |------------>|   write    |              |             |
+      |             |----------->|              |             |
+      |             |<-----------|              |             |
+      |             |            |              |             |
+      |             |-------------------------->|             |
+      |             |<--------------------------|             |
+      |<------------|            |              |   flush     |
+      |             |            |              |------------>|
+      |             |            |              |             |
+
+
+
 Compaction
 ----------
 
@@ -142,6 +160,8 @@ Physical storage
 
   - memstore
 
+    Data in the memstore is sorted in the same manner as data in a HFile
+
 - .tableinfo
 
   ..tableinfo.0000000001.crc
@@ -159,6 +179,14 @@ It's based upon hadoop TFile
 该文件是变长的，定长的block只有file into和trailer这2部分
 
 data blocks, meta blocks, file info, data index blocks, meta index blocks, trailer
+
+The data blocks contain the actual key/values as a MapFile.  
+For each “block close operation” the first key is added to the index, and the index is written on HFile close.
+
+The HFile format also adds two extra “metadata” block types: Meta and FileInfo.  
+These two key/value blocks are written upon file close.
+
+The Meta block is designed to keep a large amount of data with its key as a String, while FileInfo is a simple Map preferred for small information with keys and values that are both byte-array. Regionserver’s StoreFile uses Meta-Blocks to store a Bloom Filter, and FileInfo for Max SequenceId, Major compaction key and Timerange info. This information is useful to avoid reading the file if there’s no chance that the key is present (Bloom Filter), if the file is too old (Max SequenceId) or if the file is too new (Timerange) to contain what we’re looking for.
 
 shell$ bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -p -m -f filename
 
@@ -242,6 +270,12 @@ Configuration
 - hbase.regionserver.logroll.period
 
   default 1h
+
+- hbase.regionserver.logroll.multiplier
+
+  default 95%
+
+  WAL file is rolled when its size is about 95% of the HDFS block size
 
 
 Data lookup
