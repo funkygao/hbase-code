@@ -1327,3 +1327,12 @@ How to make hbase run step by step?
 
 - HRegionServer
 
+
+Load test
+---------
+
+- self contained
+
+  hbase org.apache.hadoop.hbase.PerformanceEvaluation
+
+- YCSB
