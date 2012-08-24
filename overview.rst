@@ -243,6 +243,7 @@ Configuration
 
   default 1h
 
+
 Data lookup
 -----------
 
@@ -322,8 +323,20 @@ Region splits
         update .META. table
 
 
+log splits
+----------
+
+The process of grouping the WAL edits by region is called log splitting.
+
+Log splitting is done by HMaster as the cluster starts or by ServerShutdownHandler as a region server shuts down. 
+
+
+.. image:: http://s14.sinaimg.cn/orignal/630c58cbtc7f90776e6ed&690
+
 ZooKeeper
 =========
+
+One or more ZooKeeper servers form what’s called an “ensemble”, which are in constant communication
 
 znode
 -----
@@ -1127,6 +1140,33 @@ Network layer
                              |-
                               - ...
 
+Processor
+^^^^^^^^^
+
+::
+
+
+    public interface TProcessor  {
+        boolean process(
+            org.apache.thrift.protocol.TProtocol tProtocol, 
+            org.apache.thrift.protocol.TProtocol tProtocol1) throws org.apache.thrift.TException;
+    }
+
+
+Handler
+^^^^^^^
+
+::
+
+    public interface Hbase.Iface {
+        public void enableTable(byte[] tableName) throws IOError, TException;
+        public void disableTable(byte[] tableName) throws IOError, TException;
+        public List<TCell> get(byte[] tableName, byte[] row, byte[] column) throws IOError, TException;
+        ...
+    }
+
+
+
 
 Server
 ------
@@ -1163,6 +1203,14 @@ Server
                 |
                 ◇
             Hbase.Processor
+
+
+
+startup
+-------
+::
+
+    ./bin/hbase-daemon.sh start thrift
 
 
 Lease
