@@ -519,6 +519,34 @@ ClusterStatusTracker         ■       ■      □            标识当前clust
 MasterAddressTracker         □       ■      ■            追踪当前的master，这样当master切换时客户端和rs都自动切换 getMasterAddress()
 ============================ ======= ====== ============ ===============================================
 
+Paxos
+-----
+
+::
+
+
+            proposer                        acceptor                 learner
+                |                               |                       | 
+                |prepare req with N             |                       | 
+                |------------------             |                       | 
+                |                               |                       | 
+                |send to majority of accptors   |                       | 
+                |------------------------------>|                       | 
+                |                               |                       | 
+                |     YES if N > max(self.nList)|                       | 
+                |<------------------------------|                       | 
+                |                               |                       | 
+                |accept req                     |                       | 
+                |------------------------------>|                       | 
+                |                               |                       | 
+                |                               |accept                 | 
+                |                               |------                 | 
+                |                               |                       | 
+                |                               |inform all learners    | 
+                |                               |---------------------->| 
+                |                               |                       | 
+
+
 
 Event handler
 =============
