@@ -31,6 +31,8 @@ Method naming
 
   try {} catch (Exception e) { // noop }
 
+- putIfAbsent
+
 
 Variable naming
 ===============
