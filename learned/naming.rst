@@ -33,6 +33,8 @@ Method naming
 
 - putIfAbsent
 
+- replayRecoveredEditsIfAny
+
 
 Variable naming
 ===============
