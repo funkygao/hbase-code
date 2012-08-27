@@ -11,6 +11,7 @@ all:prepare
 	rst2html.py server/HMaster.rst $(TARGETDIR)/HMaster.html
 	rst2html.py server/HRegionServer.rst $(TARGETDIR)/HRegionServer.html
 	rst2html.py learned/naming.rst $(TARGETDIR)/naming.html
+	rst2html.py learned/typo.rst $(TARGETDIR)/typo.html
 	@echo 
 	@echo "done!!!"
 
