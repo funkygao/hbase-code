@@ -65,7 +65,9 @@ Queue
 ============================================= ===================  =====================================
 Queue name                                    Owner                desc
 ============================================= ===================  =====================================
-BlockingQueue<FlushQueueEntry> flushQueue     MemStoreFlusher      获取刷磁盘的请求，超时时间为10s
+LinkedBlockingQueue<Call> callQueue           HBaseServer          call queue
+LinkedBlockingQueue<Call> priorityCallQueue   HBaseServer          priority call queue
+DelayQueue<FlushQueueEntry> flushQueue        MemStoreFlusher      获取刷磁盘的请求，超时时间为10s
 PriorityCompactionQueue compactionQueue       CompactSplitThread   获取compact的请求，超时时间20s
 BlockingQueue<Call> callQueue                 HBaseServer          RPC server获得请求后，由Reader线程放入队列，等待Handler线程处理
 PriorityCompactionQueue compactionQueue       CompactSplitThread   获取需要Compact的HRegion
@@ -75,6 +77,12 @@ PriorityCompactionQueue compactionQueue       CompactSplitThread   获取需要C
 
 Storage
 =======
+
+members
+-------
+
+============================================= ===================  =====================================
+
 
 overview
 --------
@@ -739,6 +747,17 @@ RPC
 classes
 -------
 
+  - HBaseRPC
+
+  ::
+
+        getServer
+        getProxy
+
+
+    
+        
+
   - HBaseClient
 
     ::
@@ -774,12 +793,9 @@ classes
                         |  1                    
                         |--- Responder(Thread)
                         |
-                        |  *
-                        |--- Handler(Thread)
-                        |
-                        |--- Connection
-                        |
-                         --- Call
+                        |  *                 1       *
+                         --- Handler(Thread) ◇-------- Call
+                                             callQueue
 
  
 header
