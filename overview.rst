@@ -109,7 +109,7 @@ TODO merge behavior
                             |     128M           ------                 |     
                             |                   LogRoller       N       ◇     compactionThreshold   ---------
                             |                                  ---- StoreFile -------------------> | compact |
-                   1        | N               N               |         ^        HFile              ---------
+                   1        | N (start,end)   N               |         ^        HFile              ---------
     HRegionServer ◇---------|---- HRegion ◇----- Store ◇------|         |                         CompactSplitThread
                             |        |      cf                |         |
                             |        |                        |         |
@@ -139,6 +139,17 @@ TODO merge behavior
       |             |            |              |------------>|
       |             |            |              |             |
 
+
+ 
+Implementation
+--------------
+
+=============================== ========================================================
+Owner                           Members
+=============================== ========================================================
+HRegionServer                   onlineRegions = new ConcurrentHashMap<String, HRegion>()
+HRegion                         stores = new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR)
+=============================== ========================================================
 
 
 Compaction
