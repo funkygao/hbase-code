@@ -1343,6 +1343,26 @@ Server
 
   HsHa = half sync half async
 
+  ::
+
+        workerThread1  workerThread2  workerThreadN
+        -------------  -------------  -------------
+            |               |               |
+             -------------------------------
+                          |
+                          | deque
+                          V
+                   -------------------------
+                  | [priority]Request Queue |
+                   -------------------------
+                          ^
+                          | enque
+                          |
+                    Handlers, Acceptor
+                          |
+                        Reactor
+
+
 - TThreadPoolServer
 
 
