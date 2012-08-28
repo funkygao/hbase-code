@@ -39,6 +39,12 @@ Method naming
 Variable naming
 ===============
 
+::
+
+    try {
+    } catch (IOExeption ignored) {
+    }
+
 
 Constant naming
 ===============
