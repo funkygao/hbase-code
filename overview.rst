@@ -11,7 +11,9 @@ how HBase runs
 
 
 TODO
-====
+=====
+
+Scan 是通过 RegionScanner 实现的，它会为每个 Store 实例执行 StoreScanner 检索
 
 - KeyValue
 
@@ -19,51 +21,218 @@ TODO
 
 - hadoop TFile
 
-Notes
-=====
-
-Scan 是通过 RegionScanner 实现的，它会为每个 Store 实例执行 StoreScanner 检索
-
-
-Overview
-========
+Startup
+=======
 
 ::
 
-    
-                        HMasterInterface HBaseRPC.getProxy
-            --------------------------------------------------------------------
-           |                                                                    |
-           |    MasterAddressTracker                                            |
-           |    RootRegionTracker                                               |
-        Client -----------------------> ZooKeeper                               |
-           |                              ^   ^                                 |
-           | HRegionInterface             |   |                                 |
-           | HBaseRPC.waitForProxy        |   |                                 |
-           |                              |   |                                 |
-           |   ---------------------------     ----                             |
-           |  |                                    | ActiveMasterManager        |
-           |  |                                    | ActiveMasterManager        |
-           |  |                                    | AssignmentManager          |
-           |  | CatalogTracker                     | CatalogTracker             |
-           |  | ClusterStatusTracker               | ClusterStatusTracker       |
-           |  | MasterAddressTracker               |                            |
-           |  |                                    |                            |
-           V  |            HMsg                    |                            |
-        RegionServer -------------------------> Master <------------------------
-           |           HMasterRegionInterface      |
-           |                                       |
-            ---------------------------------------
-                            |
-                            V
-                           HDFS
+    HMasterCommandLine
+      |                
+      |                
+       - run               local
+          |                -----
+           - startMaster -|     |
+                          |     |- new MiniZooKeeperCluster.startup
+                          |     |   |
+                          |     |   |- zks = new ZooKeeperServer
+                          |     |   |- new NIOServerCnxn.Factory(clientPort).startup
+                          |     |   |        |
+                          |     |   |        |- zks.startdata
+                          |     |   |        |    |
+                          |     |   |        |    |- new ZKDatabase
+                          |     |   |        |    
+                          |     |   |         - zks.startup
+                          |     |   |             |
+                          |     |   |             |- startSessionTracker
+                          |     |   |              - setupRequestProcessors
+                          |     |   |                   |
+                          |     |   |                   | PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+                          |     |   |                   |
+                          |     |   |                   |- new FinalRequestProcessor
+                          |     |   |                   |- new SyncRequestProcessor
+                          |     |   |                    - new PrepRequestProcessor
+                          |     |   |
+                          |     |    - socket connect clientPort 'stat' to assert zk alive
+                          |     |
+                          |     |
+                          |      - new LocalHBaseCluster().startup
+                          |         |
+                          |         |- HMaster.newInstance
+                          |         |    |
+                          |         |    |- rpcServer = HBaseRPC.getServer
+                          |         |    |- rpcServer.startThreads
+                          |         |    |     |
+                          |         |    |     |- responder.start()
+                          |         |    |     |- listener.start()
+                          |         |    |      - handlers = new Handler[handlerCount].startall()
+                          |         |    |
+                          |         |     - new ZooKeeperWatcher
+                          |         |
+                          |         |- HRegionServer.newInstance
+                          |         |    |
+                          |         |    |- server = HBaseRPC.getServer
+                          |         |     - run
+                          |         |        |
+                          |         |         - server.startThreads
+                          |         |
+                          |          - start master and rs threads
+                          |
+                          |
+                           ------------ HMaster.constructMaster(HMaster.class, conf)->start();
+                           distributed
 
+HConnectionManager
+==================
+::
+
+    // A LRU Map of HConnectionKey -> HConnection
+    LinkedHashMapMap<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
+                             |
+                             | new and put
+                             |                     create                    connect quorum
+                        HConnectionImplementation ◇------- ZooKeeperWatcher ◇--------------> ZooKeeper
+                             |         ◇                     |
+                             |         | create              | process zk events
+                             |         | and                 V
+                             |         | start()          Watcher
+                             |         |
+                             |       ------------------------
+                             |      |                        |
+                             |   MasterAddressTracker   rootRegionTracker
+                             |
+                             |
+                             |◇-- master = HBaseRPC.getProxy(HMasterInterface.class)
+                             |                  |
+                             |      java.lang.reflect.Proxy.newProxyInstance(new Invoker(addr))
+                             |                                                     ◇  |
+                             |                             rpc client              |  | invoke
+                             |                           --------------------------   |
+                             |                          |                             |
+                             |                          |                 ------<-----
+                             |                          |                |
+                             |                      HBaseClient --------------> call
+                             |                          ◇
+                             |                          |
+                             |                          | HbaseObjectWritable
+                             |                          |
+                             |                      Connection(Thread)
+                             |                       |  |
+                             |                       |    --- waitForWork ->- receiveResponse ---
+                             |        setupIOstreams |     |                                     |
+                             |                       |     |                                     |
+                             |                       |      ---------------<---------------------
+                             |                       |
+                             |                 socket(create,connect)
+                             |
+                        ConcurrentHashMap<String, HRegionInterface> servers
+                        Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
+
+
+HConnection
+-----------
+
+连接到zk和rs的抽象
+
+::
+
+    HConnection conn = HConnectionManager.getConnection();
+
+    HMasterInterface master = conn.getMaster();
+    HRegionInterface rs = conn.getHRegionConnection();
+    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
+    HRegionLocation rsLocation = conn.locateRegion();
+
+Servers
+=======
+
+Interfaces
+----------
+
+::
+
+
+                    - abort                 - isStopped()
+                   |                       |- stop(String why)
+        Abortable -             Stoppable -
+            |                       |        
+            |                       |       
+             -----------------------       
+                   ^                      
+            extend |                     
+                   |                                         
+                Server -                        
+                        |- getConfiguration                       
+                        |- getZooKeeper                          
+                        |- getCatalogTracker                    
+                         - getServerName                       
+
+
+                             VersionedProtocol
+                                    ^
+                                    | extend
+                                    |
+                             HBaseRPCProtocolVersion
+                                    ^
+                                    | extend
+                                    |
+                         ------------------------------
+                        |                               |
+                HMasterInterface                    HRegionInterface
+                        |                               |
+                        |- isMasterRunning              |- getRegionInfo(byte[] regionName)
+                        |- createTable                  |- get(byte[] regionName, Get get)
+                        |- addColumn                    |- put(byte[] regionName, final Put put)
+                        |- enableTable                  |- scan
+                        |- shutdown                     |- checkAndPut
+                        |- stopMaster                   |- increment
+                        |- getClusterStatus              - ...
+                        |
+                        |- move(regionName, destServerName)
+                        |- assign(regionName)
+                         - balance(定时对Region Server的Region数进行balance)
+              
+                HMasterRegionInterface
+                        | 
+                        |- regionServerStartup
+                         - regionServerReport
+              
+                MasterServices                                    
+                        |                                        
+                        |- getAssignmentManager
+                        |- getServerManager
+                        |- getMasterFileSystem
+                        |- getExecutorService
+                         - checkTableModifiable
+              
+
+                RegionServerServices
+                        |
+                        |- HLog getWAL
+                        |- CompactionRequestor getCompactionRequester
+                        |- FlushRequester getFlushRequester
+                        |- HBaseRpcMetrics getRpcMetrics
+                         - HServerInfo getServerInfo
+
+
+Signature
+---------
+
+============== ================ ====================== ============== ================ ==================== ======
+Server         HMasterInterface HMasterRegionInterface MasterServices HRegionInterface RegionServerServices Server
+============== ================ ====================== ============== ================ ==================== ======
+HMaster        ■                ■                      ■              □                □                    ■
+HRegionServer  □                □                      □              ■                ■                    ■
+============== ================ ====================== ============== ================ ==================== ======
+
+
+Class Members
+=============
 
 Queue
-=====
+-----
 
 ============================================= ===================  =====================================
-Queue name                                    Owner                desc
+Queue                                         Owner                desc
 ============================================= ===================  =====================================
 LinkedBlockingQueue<Call> callQueue           HBaseServer          call queue
 LinkedBlockingQueue<Call> priorityCallQueue   HBaseServer          priority call queue
@@ -73,7 +242,18 @@ BlockingQueue<Call> callQueue                 HBaseServer          RPC server获
 PriorityCompactionQueue compactionQueue       CompactSplitThread   获取需要Compact的HRegion
 ============================================= ===================  =====================================
 
+Container
+---------
 
+=============================== ========================================================
+Owner                           Members
+=============================== ========================================================
+HRegionServer                   onlineRegions = new ConcurrentHashMap<String, HRegion>()
+HRegion                         stores = new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR)
+HBaseClient                     connections = new Hashtable<ConnectionId, Connection>()
+HBaseClient.Connection          calls = new Hashtable<Integer, Call>()
+HBaseRPC.ClientCache            clients = new HashMap<SocketFactory, HBaseClient>()
+=============================== ========================================================
 
 Storage
 =======
@@ -119,7 +299,6 @@ TODO merge behavior
 
 
 
-
     client          rs          WAL         memstore        HFile
       |             |            |              |             |
       | Put/Delete  |            |              |             |
@@ -134,20 +313,49 @@ TODO merge behavior
       |             |            |              |             |
 
 
- 
-Implementation
---------------
+HLog
+----
 
-=============================== ========================================================
-Owner                           Members
-=============================== ========================================================
-HRegionServer                   onlineRegions = new ConcurrentHashMap<String, HRegion>()
-HRegion                         stores = new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR)
-HBaseClient                     connections = new Hashtable<ConnectionId, Connection>()
-HBaseClient.Connection          calls = new Hashtable<Integer, Call>()
-HBaseRPC.ClientCache            clients = new HashMap<SocketFactory, HBaseClient>()
-=============================== ========================================================
+它是一个Sequence file，由一个文件头 ＋ 一条条HLog.Entry构成。
 
+.. image:: http://s3.sinaimg.cn/orignal/630c58cbtc5effc295e52&690
+    :alt: hadoop sequence file header
+
+- 每个rs只有1个HLog
+
+  而不是每个HRegion一个HLog
+
+- reader/writer
+
+  - SequenceFileLogWriter
+
+  - SequenceFileLogReader
+
+
+- writer只有append(HLog.Entry entry)操作
+
+  HLog file = file header + [entry, ...]
+
+- HRegionServer.instantiateHLog
+
+- HLog.Entry
+
+  ::
+
+                     1
+                     --- WALEdit◇----KeyValue[]
+                    |  
+    HLog.Entry◇-----|
+              1     |
+                     --- HLogKey
+                     1
+
+
+因为KeyValue仅表示了row key,column family,column qualifier,timestamp,type 和 value;
+这样就需要有地方存放 KeyValue 的归属信息,比如 region 和 table 名称。
+这些信息会被存储在 HLogKey 中
+
+通过将针对多个 cells 的更新操作包装到一个单个 WALEdit 实例中,将所有的更新看做是一个原子性的操作
 
 Compaction
 ----------
@@ -293,6 +501,9 @@ Configuration
 
   WAL file is rolled when its size is about 95% of the HDFS block size
 
+- hbase.zookeeper.property.maxClientCnxns
+
+  default 5000
 
 Data lookup
 -----------
@@ -388,6 +599,40 @@ ZooKeeper
 
 One or more ZooKeeper servers form what’s called an “ensemble”, which are in constant communication
 
+Overview
+--------
+
+::
+
+    
+                        HMasterInterface HBaseRPC.getProxy
+            --------------------------------------------------------------------
+           |                                                                    |
+           |    MasterAddressTracker                                            |
+           |    RootRegionTracker                                               |
+        Client -----------------------> ZooKeeper                               |
+           |                              ^   ^                                 |
+           | HRegionInterface             |   |                                 |
+           | HBaseRPC.waitForProxy        |   |                                 |
+           |                              |   |                                 |
+           |   ---------------------------     ----                             |
+           |  |                                    | ActiveMasterManager        |
+           |  |                                    | ActiveMasterManager        |
+           |  |                                    | AssignmentManager          |
+           |  | CatalogTracker                     | CatalogTracker             |
+           |  | ClusterStatusTracker               | ClusterStatusTracker       |
+           |  | MasterAddressTracker               |                            |
+           |  |                                    |                            |
+           V  |            HMsg                    |                            |
+        RegionServer -------------------------> Master <------------------------
+           |           HMasterRegionInterface      |
+           |                                       |
+            ---------------------------------------
+                            |
+                            V
+                           HDFS
+
+
 znode
 -----
 
@@ -444,8 +689,8 @@ EPHEMERAL
 
   每个rs下的node name为：${rsHostName},${rsPort},${rsStartcode}, data为：address.toBytes
 
-arch
-----
+Pattern
+-------
 
 实现了基于分布式的观察者模式，ZooKeeperWatcher是subject，ZooKeeperListener是observer
 
@@ -562,192 +807,102 @@ Paxos
                 |                               |---------------------->| 
                 |                               |                       | 
 
-
-
-Event handler
+ 
+-ROOT-/.META.
 =============
 
-用于局部内的调用，不属于整体的架构范畴
+-ROOT-表用于保存.META.表的所有 regions 的信息。
 
-intro
------
+.META.表存储row range位置信息
 
-Hbase通过event的方式(command pattern)，利用ExecutorService执行各种命令，例如:
-::
-
-    new ExecutorService.submit(new CloseRootHandler)
-
-
-ExecutorService
----------------
-利用java.util.concurrent.ThreadPoolExecutor
-
-
-classes
--------
+三层的类 B+Tree 的定位模式
 
 ::
 
-        Runnable
-          ^                1
-          |                --- EventType
-          |               |1
-        EventHandler ◇----|--- EventHandlerListener
-          ^               |
-          |               |--- Server
-          |               |
-          |                --- seqid
-          |                
-          |                
-          |          master   - CloseRegionHandler
-          |         ---------|- DeleteTableHanler
-           --------|         |- DisableTableHandler
-                   |         |- EnableTableHandler
-                   |         |- MetaServerShutdownHandler
-                   |         |- ModifyTableHandler
-                   |         |- OpenRegionHandler
-                   |          - ....
-                   |          
-                   | rs       - CloseMetaHandler
-                    ---------|- CloseRegionHandler
-                             |- CloseRootHandler
-                             |- OpenMetaHandler
-                             |- OpenRegionHandler
-                             |- OpenRootHandler
-                              - ...
+        zk quorum 
+            |
+            | /hbase/root-region-server
+            |
+        1. found the rs of -ROOT-
+            |
+        connect to the root rs
+            |
+        2. found the .META. from the -ROOT-
+            |
+        3. find the target rs from .META.
+            |
+        connect to the target rs
 
 
-Servers
-=======
+一个新的客户端为找到某个特定的行 key 首先需要联系 Zookeeper Qurom。
+它会从ZooKeeper检索持有 -ROOT- region的服务器名。通过这个信息,它询问拥有 -ROOT- region的region server,得到持有对应行key的.META. 表 region 的服务器名。
 
-::
+这两个操作的结果都会被缓存下来,因此只需要查找一次。 
 
+最后,它就可以查询.META.服务器然后检索到包含给定行 key 的 region 所在的服务器。
 
-                    - abort                 - isStopped()
-                   |                       |- stop(String why)
-        Abortable -             Stoppable -
-            |                       |
-             -----------------------
-                   ^
-            extend |                                    HBaseRPCProtocolVersion
-                   |                                         ^
-                  --------------------------------------     | extend
-                 |                                      |    |
-                Server -                        HRegionInterface -
-                        |- getConfiguration                       |- getRegionInfo(regionName)
-                        |- getZooKeeper                           |- get
-                        |- getCatalogTracker                      |- put
-                         - getServerName                          |- scan
-                                                                  |- checkAndPut
-                MasterServices                                    |- increment
-                        |                                          - ...
-                        |- getAssignmentManager
-                        |- getServerManager
-                        |- getMasterFileSystem
-                        |- getExecutorService
-                         - checkTableModifiable
-              
-                HMasterInterface
-                        |
-                        |- isMasterRunning
-                        |- createTable
-                        |- addColumn
-                        |- enableTable
-                        |- shutdown
-                        |- stopMaster
-                        |- getClusterStatus
-                        |
-                        |- move(regionName, destServerName)
-                        |- assign(regionName)
-                         - balance(定时对Region Server的Region数进行balance)
-              
-                HMasterRegionInterface
-                        | 
-                        |- regionServerStartup
-                         - regionServerReport
-              
+当Region被拆分、合并或者重新分配的时候，都需要来修改这张表的内容。
 
-                RegionServerServices
-                        |
-                        |- HLog getWAL
-                        |- CompactionRequestor getCompactionRequester
-                        |- FlushRequester getFlushRequester
-                        |- HBaseRpcMetrics getRpcMetrics
-                         - HServerInfo getServerInfo
+schema
+------
 
+它们的表结构是相同的
 
-          HMaster       -> (HMasterInterface, HMasterRegionInterface, MasterServices,       Server)
-          HRegionServer -> (HRegionInterface,                         RegionServerServices, Server) 
+.. image:: http://s3.sinaimg.cn/orignal/630c58cbt7a30a3ce2452&690
 
-
-cluster
-=======
+HTableDescriptor.ROOT_TABLEDESC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
-    HMasterCommandLine
-      |                
-      |- run               local
-          |                -----
-          |- startMaster -|     |
-                          |     |- new MiniZooKeeperCluster.startup
-                          |     |   |
-                          |     |   |- zks = new ZooKeeperServer
-                          |     |   |- new NIOServerCnxn.Factory(clientPort).startup
-                          |     |   |        |
-                          |     |   |        |- zks.startdata
-                          |     |   |        |    |
-                          |     |   |        |    |- new ZKDatabase
-                          |     |   |        |    
-                          |     |   |        |- zks.startup
-                          |     |   |             |
-                          |     |   |             |- startSessionTracker
-                          |     |   |             |- setupRequestProcessors
-                          |     |   |                   |
-                          |     |   |                   | PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
-                          |     |   |                   |
-                          |     |   |                   |- new FinalRequestProcessor
-                          |     |   |                   |- new SyncRequestProcessor
-                          |     |   |                   |- new PrepRequestProcessor
-                          |     |   |
-                          |     |   |- socket connect clientPort 'stat' to assert zk alive
-                          |     |
-                          |     |
-                          |     |- new LocalHBaseCluster().startup
-                          |         |
-                          |         |- HMaster.newInstance
-                          |         |    |
-                          |         |    |- rpcServer = HBaseRPC.getServer
-                          |         |    |- rpcServer.startThreads
-                          |         |    |     |
-                          |         |    |     |- responder.start()
-                          |         |    |     |- listener.start()
-                          |         |    |     |- handlers = new Handler[handlerCount].startall()
-                          |         |    |
-                          |         |    |- new ZooKeeperWatcher
-                          |         |
-                          |         |- HRegionServer.newInstance
-                          |         |    |
-                          |         |    |- server = HBaseRPC.getServer
-                          |         |    |- run
-                          |         |        |
-                          |         |        |- server.startThreads
-                          |         |
-                          |         |- start master and rs threads
-                          |
-                          |
-                           ------------ HMaster.constructMaster(HMaster.class, conf)->start();
-                           distributed
+        new HTableDescriptor(
+            "-ROOT-", // table name
+            new HColumnDescriptor[] { 
+                new HColumnDescriptor (
+                    "info",  // family name
+                    10,  // max versions
+                    Compression.Algorithm.NONE.getName(), // compression
+                    true, // inMemory
+                    true,  // blockCacheEnabled
+                    8 * 1024, // blocksize
+                    HConstants.FOREVER, // ttl
+                    StoreFile.BloomType.NONE.toString(), // bloomFilter
+                    HConstants.REPLICATION_SCOPE_LOCAL //scope
+                ) 
+            }
+        );
 
 
-Replication
-===========
+HTableDescriptor.META_TABLEDESC
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-HBase replication是在不同的HBase部署之间拷贝数据的一种方式。
+::
 
-它可以作为一种灾难恢复解决方案, 也可以用于提供 HBase 层的更高的可用性
+        new HTableDescriptor(
+            ".META.", // table name
+            new HColumnDescriptor[] { 
+                new HColumnDescriptor (
+                    "info",  // family name
+                    10,  // max versions
+                    Compression.Algorithm.NONE.getName(), // compression
+                    true, // inMemory
+                    true,  // blockCacheEnabled
+                    8 * 1024, // blocksize
+                    HConstants.FOREVER, // ttl
+                    StoreFile.BloomType.NONE.toString(), // bloomFilter
+                    HConstants.REPLICATION_SCOPE_LOCAL //scope
+                ) 
+            }
+        );
 
-采用与mysql replication类似的 master push架构
+
+Locating
+--------
+
+::
+
+    HConnectionManager.locateRegion(byte [] regionName)
+
 
 RPC
 ===
@@ -876,8 +1031,6 @@ HBaseClient
                                     -- waitForWork
                                        
 
-
-
 HBaseServer
 -----------
 
@@ -922,7 +1075,6 @@ Reader线程接收到RPC请求后，丢到Queue里；10个Handler线程处理Que
 HBase里真正传输的是HBaseObjectWritable
 
 
-
 通信信道
 ------------
 
@@ -937,218 +1089,105 @@ HBase里真正传输的是HBaseObjectWritable
   client --> rs
 
 - HMasterRegionInterface
-
+     
   rs --> master
 
 
+Mechanism
+=========
 
-
-
-HConnectionManager
-==================
-::
-
-    // A LRU Map of HConnectionKey -> HConnection
-    LinkedHashMapMap<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
-                             |
-                             | new and put
-                             |                     create                    connect quorum
-                        HConnectionImplementation ◇------- ZooKeeperWatcher ◇--------------> ZooKeeper
-                             |         ◇                     |
-                             |         | create              | process zk events
-                             |         | and                 V
-                             |         | start()          Watcher
-                             |         |
-                             |       ------------------------
-                             |      |                        |
-                             |   MasterAddressTracker   rootRegionTracker
-                             |
-                             |
-                             |◇-- master = HBaseRPC.getProxy(HMasterInterface.class)
-                             |                  |
-                             |      java.lang.reflect.Proxy.newProxyInstance(new Invoker(addr))
-                             |                                                     ◇  |
-                             |                             rpc client              |  | invoke
-                             |                           --------------------------   |
-                             |                          |                             |
-                             |                          |                 ------<-----
-                             |                          |                |
-                             |                      HBaseClient --------------> call
-                             |                          ◇
-                             |                          |
-                             |                          | HbaseObjectWritable
-                             |                          |
-                             |                      Connection(Thread)
-                             |                       |  |
-                             |                       |    --- waitForWork ->- receiveResponse ---
-                             |        setupIOstreams |     |                                     |
-                             |                       |     |                                     |
-                             |                       |      ---------------<---------------------
-                             |                       |
-                             |                 socket(create,connect)
-                             |
-                        ConcurrentHashMap<String, HRegionInterface> servers
-                        Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
-
-
-HConnection
------------
-
-连接到zk和rs的抽象
+Lease
+-----
 
 ::
 
-    HConnection conn = HConnectionManager.getConnection();
 
-    HMasterInterface master = conn.getMaster();
-    HRegionInterface rs = conn.getHRegionConnection();
-    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
-    HRegionLocation rsLocation = conn.locateRegion();
 
- 
--ROOT-/.META.
-=============
+                - getDelay()
+               |
+            Delayed                              use cases
+               ^                                 ---------
+               |     leaseExpired                    |
+            Lease ◇--------------- LeaseListener     |
+               |                        ^            |
+               |                        |            |
+               |                ----------------------------
+               |               |                            |
+               |            RowLockListener         ScannerListener
+               |               |                            |
+               |                ----------------------------
+               |                                |
+               |                                ◇
+               |                          HRegionServer    
+               ◇
+            Leasese -----> Thread
+               |
+               |- createLease()
+               |- addLease()
+               |- renewLease()
+               |- cancelLease()
+                - removeLease()
 
--ROOT-表用于保存.META.表的所有 regions 的信息。
 
-.META.表存储row range位置信息
+Event handler
+-------------
 
-三层的类 B+Tree 的定位模式
+用于局部内的调用，不属于整体的架构范畴
+
+intro
+^^^^^
+
+Hbase通过event的方式(command pattern)，利用ExecutorService执行各种命令，例如:
+::
+
+    new ExecutorService.submit(new CloseRootHandler)
+
+
+ExecutorService
+^^^^^^^^^^^^^^^
+利用java.util.concurrent.ThreadPoolExecutor
+
+
+classes
+^^^^^^^
 
 ::
 
-        zk quorum 
-            |
-            | /hbase/root-region-server
-            |
-        1. found the rs of -ROOT-
-            |
-        connect to the root rs
-            |
-        2. found the .META. from the -ROOT-
-            |
-        3. find the target rs from .META.
-            |
-        connect to the target rs
-
-
-一个新的客户端为找到某个特定的行 key 首先需要联系 Zookeeper Qurom。
-它会从ZooKeeper检索持有 -ROOT- region的服务器名。通过这个信息,它询问拥有 -ROOT- region的region server,得到持有对应行key的.META. 表 region 的服务器名。
-
-这两个操作的结果都会被缓存下来,因此只需要查找一次。 
-
-最后,它就可以查询.META.服务器然后检索到包含给定行 key 的 region 所在的服务器。
-
-当Region被拆分、合并或者重新分配的时候，都需要来修改这张表的内容。
-
-schema
-------
-
-它们的表结构是相同的
-
-.. image:: http://s3.sinaimg.cn/orignal/630c58cbt7a30a3ce2452&690
-
-HTableDescriptor.ROOT_TABLEDESC
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-        new HTableDescriptor(
-            "-ROOT-", // table name
-            new HColumnDescriptor[] { 
-                new HColumnDescriptor (
-                    "info",  // family name
-                    10,  // max versions
-                    Compression.Algorithm.NONE.getName(), // compression
-                    true, // inMemory
-                    true,  // blockCacheEnabled
-                    8 * 1024, // blocksize
-                    HConstants.FOREVER, // ttl
-                    StoreFile.BloomType.NONE.toString(), // bloomFilter
-                    HConstants.REPLICATION_SCOPE_LOCAL //scope
-                ) 
-            }
-        );
-
-
-HTableDescriptor.META_TABLEDESC
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-        new HTableDescriptor(
-            ".META.", // table name
-            new HColumnDescriptor[] { 
-                new HColumnDescriptor (
-                    "info",  // family name
-                    10,  // max versions
-                    Compression.Algorithm.NONE.getName(), // compression
-                    true, // inMemory
-                    true,  // blockCacheEnabled
-                    8 * 1024, // blocksize
-                    HConstants.FOREVER, // ttl
-                    StoreFile.BloomType.NONE.toString(), // bloomFilter
-                    HConstants.REPLICATION_SCOPE_LOCAL //scope
-                ) 
-            }
-        );
-
-
-locating
---------
-
-::
-
-    HConnectionManager.locateRegion()
+        Runnable
+          ^                1
+          |                --- EventType
+          |               |1
+        EventHandler ◇----|--- EventHandlerListener
+          ^               |
+          |               |--- Server
+          |               |
+          |                --- seqid
+          |                
+          |                
+          |          master   - CloseRegionHandler
+          |         ---------|- DeleteTableHanler
+           --------|         |- DisableTableHandler
+                   |         |- EnableTableHandler
+                   |         |- MetaServerShutdownHandler
+                   |         |- ModifyTableHandler
+                   |         |- OpenRegionHandler
+                   |          - ....
+                   |          
+                   | rs       - CloseMetaHandler
+                    ---------|- CloseRegionHandler
+                             |- CloseRootHandler
+                             |- OpenMetaHandler
+                             |- OpenRegionHandler
+                             |- OpenRootHandler
+                              - ...
 
 
 
-HLog
-=================
-
-它是一个Sequence file，由一个文件头 ＋ 一条条HLog.Entry构成。
-
-.. image:: http://s3.sinaimg.cn/orignal/630c58cbtc5effc295e52&690
-    :alt: hadoop sequence file header
-
-- 每个rs只有1个HLog
-
-  而不是每个HRegion一个HLog
-
-- reader/writer
-
-  - SequenceFileLogWriter
-
-  - SequenceFileLogReader
-
-
-- writer只有append(HLog.Entry entry)操作
-
-  HLog file = file header + [entry, ...]
-
-- HRegionServer.instantiateHLog
-
-- HLog.Entry
-
-  ::
-
-                     1
-                     --- WALEdit◇----KeyValue[]
-                    |  
-    HLog.Entry◇-----|
-              1     |
-                     --- HLogKey
-                     1
-
-
-因为KeyValue仅表示了row key,column family,column qualifier,timestamp,type 和 value;
-这样就需要有地方存放 KeyValue 的归属信息,比如 region 和 table 名称。
-这些信息会被存储在 HLogKey 中
-
-通过将针对多个 cells 的更新操作包装到一个单个 WALEdit 实例中,将所有的更新看做是一个原子性的操作
+Advanced
+========
 
 Filter
-======
+------
 
 ::
 
@@ -1172,8 +1211,18 @@ Filter
             RowFilter ValueFilter FamilyFilter QualifierFilter
 
 
+Replication
+-----------
+
+HBase replication是在不同的HBase部署之间拷贝数据的一种方式。
+
+它可以作为一种灾难恢复解决方案, 也可以用于提供 HBase 层的更高的可用性
+
+采用与mysql replication类似的 master push架构
+
 Coprocessor
-===========
+-----------
+
 ::
 
 
@@ -1285,8 +1334,6 @@ Handler
     }
 
 
-
-
 Server
 ------
 
@@ -1297,7 +1344,6 @@ Server
   HsHa = half sync half async
 
 - TThreadPoolServer
-
 
 
 ::
@@ -1330,40 +1376,6 @@ startup
 ::
 
     ./bin/hbase-daemon.sh start thrift
-
-
-Lease
-=====
-
-::
-
-
-
-                - getDelay()
-               |
-            Delayed                              use cases
-               ^                                 ---------
-               |     leaseExpired                    |
-            Lease ◇--------------- LeaseListener     |
-               |                        ^            |
-               |                        |            |
-               |                ----------------------------
-               |               |                            |
-               |            RowLockListener         ScannerListener
-               |               |                            |
-               |                ----------------------------
-               |                                |
-               |                                ◇
-               |                          HRegionServer    
-               ◇
-            Leasese -----> Thread
-               |
-               |- createLease()
-               |- addLease()
-               |- renewLease()
-               |- cancelLease()
-                - removeLease()
-
 
 
 HBase shell
@@ -1410,15 +1422,7 @@ DML
 - truncate
 
 
-config
-======
-
-- hbase.zookeeper.property.maxClientCnxns
-
-  Defaults 5000
-
-
-debug
+Debug
 =====
 
 shell
@@ -1456,17 +1460,3 @@ Load test
 
 - YCSB
 
-
-Misc
-====
-
-speed and throughput
---------------------
-
-=========== =========== =========== =========== =============== =============== =========== ================
-Item        L1          L2          L3          memory          disk            SSD         NIC
-=========== =========== =========== =========== =============== =============== =========== ================
-volumn      32KB        256KB       8MB         X0 GB           X TB            X00 GB      -
-seek        2ns         5ns         15ns        50ns            10ms            100us       -
-throuput    6500MB/s    3000        2200        800             100             250         100
-=========== =========== =========== =========== =============== =============== =========== ================
