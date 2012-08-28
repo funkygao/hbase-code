@@ -752,32 +752,55 @@ HBase replication是在不同的HBase部署之间拷贝数据的一种方式。
 RPC
 ===
 
-classes
--------
+运行机制
+-----------
 
-  - HBaseRPC
+.. image:: http://s12.sinaimg.cn/orignal/630c58cbtc5e5ff85fc2b&690
+    :alt: hbase client rpc stub
 
-  ::
+.. image:: http://s9.sinaimg.cn/orignal/630c58cbt7a309f2464a8&690
+
+原理类似于RMI:
+
+#. client端访问RPC模块得到一个实例化RegionserverInterface接口的的代理类对象
+
+   1,2
+#. client通过代理对象访问代理机制实现的Invoker类
+
+   其中的方法invoke()调用一个call()函数建立连接，通过socket建立连接，序列化发送的数据，发送到rs
+
+   3,4
+#. HBaseClient会开启一个线程connection，监听rs的执行结果，监听到结果后反序列化，还原对象
+
+   并回复给client调用端
+
+   5,6
+
+
+HBaseRPC
+--------
+
+::
 
         HBaseRPC 
             |                                             
-            |-- getServer -> HBaseRPC.Server(HBaseServer) 
-            |                   |
-            |                   | startThreads()
-            |                   |
-            |                   |   1
-            |                   |   -- responder.start()
-            |                   |  |
-            |                   |  |10
-            |                    --|-- handlers.start all() ------- 
-            |                      |                               |
-            |                      |                               | deque
-            |                      |                               V
-            |                      |                            callQueue
+            |-- getServer -> HBaseRPC.Server(HBaseServer) ◇--------------------- 
+            |                   |                                               |
+            |                   | startThreads()                                |
+            |                   |                                               |
+            |                   |   1                                           |   
+            |                   |   -- responder.start()                        |
+            |                   |  |                                            |
+            |                   |  |10                                          |   
+            |                    --|-- handlers.start all() -------             |   
+            |                      |                               |            |   
+            |                      |                               | consumer   |
+            |                      |                               V            |
+            |                      |                            callQueue ------
             |                      |                               ^
-            |                      |                               | enque
-            |                      |1                   10         |
-            |                       -- listener.start() ------ reader.start()
+            |                      |                               | producer
+            |                      |1                    10        |
+            |                       -- listener.start() ◇----- reader.start()
             |
             |
             |                                     _ HMaster
@@ -793,11 +816,12 @@ classes
     
         
 
-  - HBaseClient
+HBaseClient
+-----------
 
-    对外只提供call这个方法
+对外只提供call这个方法
 
-    ::
+::
 
 
                             Connections to a given host/port are reused
@@ -854,13 +878,14 @@ classes
 
 
 
-  - `HBaseServer`
+HBaseServer
+-----------
 
-    The RPC server. HMaster和HRegionServer都会创建该对象，作为成员变量
+The RPC server. HMaster和HRegionServer都会创建该对象，作为成员变量
 
-    Reader线程接收到RPC请求后，丢到Queue里；10个Handler线程处理Queue(默认1000)
+Reader线程接收到RPC请求后，丢到Queue里；10个Handler线程处理Queue(默认1000)
 
-    ::
+::
 
 
                                                      1
@@ -916,63 +941,7 @@ HBase里真正传输的是HBaseObjectWritable
   rs --> master
 
 
-.. image:: http://s15.sinaimg.cn/orignal/630c58cbtc5e5547dd23e&690
-    :alt: hbase channels
 
-
-HConnection
------------
-
-连接到zk和rs的抽象
-
-::
-
-    HConnection conn = HConnectionManager.getConnection();
-
-    HMasterInterface master = conn.getMaster();
-    HRegionInterface rs = conn.getHRegionConnection();
-    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
-    HRegionLocation rsLocation = conn.locateRegion();
-
-
-报文
--------
-
-::
-
-    RegionServer1   RegionServerN
-        |                |
-         ----------------
-                |
-                V HMsg
-                |
-             Master
-
-
-
-运行机制
------------
-
-.. image:: http://s12.sinaimg.cn/orignal/630c58cbtc5e5ff85fc2b&690
-    :alt: hbase client rpc stub
-
-.. image:: http://s9.sinaimg.cn/orignal/630c58cbt7a309f2464a8&690
-
-原理类似于RMI:
-
-#. client端访问RPC模块得到一个实例化RegionserverInterface接口的的代理类对象
-
-   1,2
-#. client通过代理对象访问代理机制实现的Invoker类
-
-   其中的方法invoke()调用一个call()函数建立连接，通过socket建立连接，序列化发送的数据，发送到rs
-
-   3,4
-#. HBaseClient会开启一个线程connection，监听rs的执行结果，监听到结果后反序列化，还原对象
-
-   并回复给client调用端
-
-   5,6
 
 
 HConnectionManager
@@ -1021,6 +990,20 @@ HConnectionManager
                         ConcurrentHashMap<String, HRegionInterface> servers
                         Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>> cachedRegionLocations
 
+
+HConnection
+-----------
+
+连接到zk和rs的抽象
+
+::
+
+    HConnection conn = HConnectionManager.getConnection();
+
+    HMasterInterface master = conn.getMaster();
+    HRegionInterface rs = conn.getHRegionConnection();
+    ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
+    HRegionLocation rsLocation = conn.locateRegion();
 
  
 -ROOT-/.META.
