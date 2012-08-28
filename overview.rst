@@ -78,12 +78,6 @@ PriorityCompactionQueue compactionQueue       CompactSplitThread   获取需要C
 Storage
 =======
 
-members
--------
-
-============================================= ===================  =====================================
-
-
 overview
 --------
 
@@ -149,6 +143,9 @@ Owner                           Members
 =============================== ========================================================
 HRegionServer                   onlineRegions = new ConcurrentHashMap<String, HRegion>()
 HRegion                         stores = new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR)
+HBaseClient                     connections = new Hashtable<ConnectionId, Connection>()
+HBaseClient.Connection          calls = new Hashtable<Integer, Call>()
+HBaseRPC.ClientCache            clients = new HashMap<SocketFactory, HBaseClient>()
 =============================== ========================================================
 
 
@@ -762,29 +759,104 @@ classes
 
   ::
 
-        getServer
-        getProxy
-
+        HBaseRPC 
+            |                                             
+            |-- getServer -> HBaseRPC.Server(HBaseServer) 
+            |                   |
+            |                   | startThreads()
+            |                   |
+            |                   |   1
+            |                   |   -- responder.start()
+            |                   |  |
+            |                   |  |10
+            |                    --|-- handlers.start all() ------- 
+            |                      |                               |
+            |                      |                               | deque
+            |                      |                               V
+            |                      |                            callQueue
+            |                      |                               ^
+            |                      |                               | enque
+            |                      |1                   10         |
+            |                       -- listener.start() ------ reader.start()
+            |
+            |
+            |                                     _ HMaster
+             -- getProxy  -> VersionedProtocol <-|- HRegionServer
+                   |                             |
+                   |                             |- HRegionInterface
+            Proxy.newProxyInstance               |- HMasterInterface
+                   |                              - HMasterRegionInterface
+                   | on invoke
+                   |
+            HBaseClient.call(new new Invocation(method, args), addr)
 
     
         
 
   - HBaseClient
 
+    对外只提供call这个方法
+
     ::
 
-                                                 1
-                                                -- Socket
-                                               |
-        HBaseClient ◇---- Connection(Thread) ◇-|
-                    1   *                    1 | *
-                                                -- Call
+
+                            Connections to a given host/port are reused
+                                      /
+                                    /
+                      pool        /                   1
+        HBaseClient ◇------ Connection(Thread) ◇------- Socket
+            |       1     *                    1   
+            |                                    
+            |
+            |- call(Writable[] params, InetSocketAddress[] addresses) throws IOException
+            |
+            |- call(Writable param, InetSocketAddress addr,
+            |           UserGroupInformation ticket, int rpcTimeout) throws IOException
+             - call(Writable param, InetSocketAddress address) throws IOException
+            
+
+
+    Internal class
+
+    ::
+
+                        - Connection(Thread) --- PingInputStream(FilterInputStream)
+                       |
+                       |- ConnectionId
+                       |
+        HBaseClient ---|- Call
+                       |
+                       |
+                       |
+                       |- ParalleCall(Call)
+                       |
+                        - ParalleResults
+
+
+    monitor
+    
+    ::
+
+
+                              --- callComplete
+                             |       |
+                   - Call ---|       | notify
+                  |          |       V
+                  |           -- HBaseClient.call() 
+        resource -|              
+                  |
+                  |                 --- addCall
+                  |                |       |
+                   - Connection ---|       | notify
+                                   |       V
+                                    -- waitForWork
+                                       
+
+
 
   - `HBaseServer`
 
     The RPC server. HMaster和HRegionServer都会创建该对象，作为成员变量
-
-    HBaseServer server = HBaseRPC.getServer();
 
     Reader线程接收到RPC请求后，丢到Queue里；10个Handler线程处理Queue(默认1000)
 
@@ -809,31 +881,6 @@ classes
                                              callQueue
 
  
-header
-------
-
-::
-
-    Request: client -> server
-
-    header:
-    struct {
-        char[4] magic = 'hrpc';
-        char version = 3;
-        int lenOfUserGroupInformation;
-        UserGroupInformation obj;
-    }
-
-    body:
-    HbaseObjectWritable
-
-    Response: server -> client
-    struct {
-        int id;
-    }
-
-
-    
 序列化
 ------------
 
