@@ -23,3 +23,9 @@ volumn      32KB        256KB       8MB         X0 GB           X TB            
 seek        2ns         5ns         15ns        50ns            10ms            100us       -
 throuput    6500MB/s    3000        2200        800             100             250         100
 =========== =========== =========== =========== =============== =============== =========== ================
+
+Summary:
+
+Memory access is as little as 6 times faster for sequential reads, or 100,000 times 
+faster for random reads than reading from disk
+
