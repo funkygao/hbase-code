@@ -248,11 +248,12 @@ Container
 =============================== ========================================================
 Owner                           Members
 =============================== ========================================================
-HRegionServer                   onlineRegions = new ConcurrentHashMap<String, HRegion>()
-HRegion                         stores = new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR)
-HBaseClient                     connections = new Hashtable<ConnectionId, Connection>()
-HBaseClient.Connection          calls = new Hashtable<Integer, Call>()
-HBaseRPC.ClientCache            clients = new HashMap<SocketFactory, HBaseClient>()
+HRegionServer                   ConcurrentHashMap<String, HRegion>() onlineRegions
+HRegion                         ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR) stores
+HBaseClient                     Hashtable<ConnectionId, Connection>() connections
+HBaseClient.Connection          new Hashtable<Integer, Call>() calls
+HBaseRPC.ClientCache            HashMap<SocketFactory, HBaseClient>() clients
+HConnectionManager              LinkedHashMapMap<HConnectionKey, HConnectionImplementation> HBASE_INSTANCES; 
 =============================== ========================================================
 
 Storage
