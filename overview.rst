@@ -249,6 +249,7 @@ Container
 Owner                           Members
 =============================== ========================================================
 HRegionServer                   ConcurrentHashMap<String, HRegion>() onlineRegions
+HLog                            ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR) lastSeqWritten
 HRegion                         ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR) stores
 HBaseClient                     Hashtable<ConnectionId, Connection>() connections
 HBaseClient.Connection          new Hashtable<Integer, Call>() calls
