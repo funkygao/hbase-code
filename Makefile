@@ -7,6 +7,7 @@ TARGETDIR=target
 all:prepare
 	rst2html.py README.rst $(TARGETDIR)/README.html
 	rst2html.py overview.rst $(TARGETDIR)/overview.html
+	rst2html.py zookeeper.rst $(TARGETDIR)/zookeeper.html
 	rst2html.py tuning.rst $(TARGETDIR)/tuning.html
 	rst2html.py java/nio.rst $(TARGETDIR)/nio.html
 	rst2html.py server/HMaster.rst $(TARGETDIR)/HMaster.html
