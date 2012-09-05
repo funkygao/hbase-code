@@ -19,6 +19,7 @@ NOTES
         LOOKING, FOLLOWING, LEADING, OBSERVING;
     }
 
+
     public enum LearnerType {
         PARTICIPANT, OBSERVER;
     }
@@ -120,8 +121,117 @@ quorum peers refer to the servers that make up an ensemble
 Servers refer to machines that make up the ZooKeeper service
 client refers to any host or process which uses a ZooKeeper service.
 
-Data model
+QuorumPeer
 ==========
+
+Declaration
+-----------
+extends Thread implements QuorumStats.Provider
+
+Members
+-------
+
+=============================== ======================================= ===============
+class                           member                                  desc
+=============================== ======================================= ===============
+QuorumPeer                      long myid
+QuorumPeer                      int tickTime
+QuorumPeer                      volatile Vote currentVote               This is who I think the leader currently is
+QuorumPeer                      volatile boolean running
+QuorumPeer                      Map<Long, QuorumServer> quorumPeers     cluster里的所有服务器，包括自己
+QuorumPeer                      QuorumVerifier quorumConfig             strategy pattern
+QuorumPeer                      QuorumCnxManager qcm
+QuorumPeer                      FileTxnSnapLog logFactory
+QuorumPeer                      ZKDatabase zkDb
+QuorumPeer                      LearnerType learnerType
+QuorumPeer                      ServerState state = ServerState.LOOKING
+QuorumPeer                      InetSocketAddress myQuorumAddr
+QuorumPeer                      int electionType
+QuorumPeer                      Election electionAlg
+QuorumPeer                      NIOServerCnxn.Factory cnxnFactory
+QuorumPeer                      QuorumStats quorumStats
+QuorumPeer                      ResponderThread responder
+QuorumPeer                      Follower follower
+QuorumPeer                      Leader leader
+QuorumPeer                      Observer observer
+=============================== ======================================= ===============
+
+start
+-----
+
+::
+
+    zkDb.loadDataBase()
+           |
+    cnxnFactory.start()
+           |
+    startLeaderElection()
+           |
+    super.start()
+
+
+state
+------
+
+::
+
+                                    ---------
+                                   |         |
+                                   V         |
+                                LOOKING -----
+                                   ^
+                                   |
+                     --------------------------------------------------
+                    |                       |                          |
+                OBSERVING               FOLLOWING                   LEADING
+                    |                       |                          |
+             observeLeader()            followLeader()               lead()
+                                               |
+                                               |- connectLeader
+                                               |
+                                               |      ------------
+                                               |     |            |
+                                               |- readPacket      |
+                                                - processPackage  |
+                                                     ^            |
+                                                     |   loop     |
+                                                      -------------
+
+run
+---
+
+Related
+-------
+
+::
+
+                                                  extends   - ObserverZooKeeperServer
+            Learner ◇--- LearnerZooKeeperServer <----------| 
+              ^                                             - FollowerZooKeeperServer
+              | extends
+            ----------------
+           |                |
+        Follower        Observer
+
+
+                                               - ServerStats serverStats
+                                              |- NIOServerCnxn.Factory serverCnxnFactory
+                                              |- HashMap<String, ChangeRecord> outstandingChangesForPath
+                                              |- SessionTracker sessionTracker
+                                              |- FileTxnSnapLog txnLogFactory
+                                              |- ZKDatabase zkDb
+                    ZooKeeperServer ◇---------|
+                            |                  - RequestProcessor firstProcessor
+                            |
+                    QuorumZooKeeperServer
+                            |
+                        ----------------------------------------
+                       |                                        |
+                    LearnerZooKeeperServer              LeaderZooKeeperServer
+                                |
+                        ----------------------------------------
+                       |                                        |
+                    ObserverZooKeeperServer     FollowerZooKeeperServer
 
 
 Definitions
@@ -194,27 +304,6 @@ startup
 State
 -----
 
-=============================== =========================
-class                           member
-=============================== =========================
-QuorumPeer                      long myid
-QuorumPeer                      QuorumVerifier quorumConfig             strategy pattern
-QuorumPeer                      QuorumCnxManager qcm
-QuorumPeer                      ZKDatabase zkDb
-QuorumPeer                      LearnerType learnerType
-QuorumPeer                      Map<Long, QuorumServer> quorumPeers     cluster里的所有服务器，包括自己
-QuorumPeer                      volatile Vote currentVote               This is who I think the leader currently is
-QuorumPeer                      volatile boolean running
-QuorumPeer                      int tickTime
-QuorumPeer                      ServerState state = ServerState.LOOKING
-QuorumPeer                      InetSocketAddress myQuorumAddr
-QuorumPeer                      int electionType
-QuorumPeer                      Election electionAlg
-QuorumPeer                      ServerCnxnFactory cnxnFactory
-QuorumPeer                      FileTxnSnapLog logFactory
-QuorumPeer                      QuorumStats quorumStats
-
-=============================== =========================
 
 
 ::
