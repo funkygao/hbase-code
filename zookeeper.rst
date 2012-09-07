@@ -30,6 +30,12 @@ Replica consistency
 
 Zab(zookeeper atomic broadcast) protocol  - a high performance broadcast protocol
 
+它有2种模式：
+
+- 恢复模式
+
+- 广播模式
+
 packets 
 -------
 a sequence of bytes sent through a FIFO channel
@@ -121,6 +127,57 @@ quorum peers refer to the servers that make up an ensemble
 Servers refer to machines that make up the ZooKeeper service
 client refers to any host or process which uses a ZooKeeper service.
 
+QuorumCnxManager
+================
+
+class
+-----
+
+=============== =================
+Internal class  Role
+=============== =================
+Message         msg  
+Listener        绑定到当前QuorumPeer的 electionAddr
+SendWorker      send msg
+RecvWorker      receive msg
+=============== =================
+
+queue
+-----
+
+- ArrayBlockingQueue<Message> recvQueue
+
+- ConcurrentHashMap<Long, SendWorker> senderWorkerMap
+
+- ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap
+
+- ConcurrentHashMap<Long, ByteBuffer> lastMessageSent
+
+
+FastLeaderElection
+==================
+
+class
+-----
+
+========================== =================
+Internal class             Role
+========================== =================
+Notification
+ToSend
+Messenger
+Messenger.WorkerReceiver
+Messenger.WorkerSender
+========================== =================
+
+queue
+-----
+
+- LinkedBlockingQueue<ToSend> sendqueue
+
+- LinkedBlockingQueue<Notification> recvqueue
+
+
 QuorumPeer
 ==========
 
@@ -148,7 +205,7 @@ QuorumPeer                      ServerState state = ServerState.LOOKING
 QuorumPeer                      InetSocketAddress myQuorumAddr
 QuorumPeer                      int electionType
 QuorumPeer                      Election electionAlg
-QuorumPeer                      NIOServerCnxn.Factory cnxnFactory
+QuorumPeer                      NIOServerCnxn.Factory cnxnFactory       通信线程，接收client请求
 QuorumPeer                      QuorumStats quorumStats
 QuorumPeer                      ResponderThread responder
 QuorumPeer                      Follower follower
@@ -165,18 +222,31 @@ start
            |
     cnxnFactory.start()
            |
-    startLeaderElection()
+    startLeaderElection() --- 启动response线程（根据自身状态）向其他server回复推荐的leader
            |
-    super.start()
+    super.start() --- 进行选举根据选举结果设置自己的状态和角色
 
 
 state
 ------
 
+刚开始的时候，每个peer都是LOOKING状态
+
+做Leader的server如果发现拥有的follower少于半数时，它重新进入looking状态，重新进行leader选举过程
+
+============ ==========================
+State        Description
+============ ==========================
+LOOKING      不知道谁是leader，会发起leader选举
+OBSERVING    观察leader是否有改变，然后同步leader的状态
+FOLLOWING    接收leader的proposal ，进行投票。并和leader进行状态同步
+LEADING      对Follower的投票进行决议，将状态和follower进行同步
+============ ==========================
+
 ::
 
                                     ---------
-                                   |         |
+                                   |         |lookForLeader
                                    V         |
                                 LOOKING -----
                                    ^
@@ -205,13 +275,14 @@ Related
 
 ::
 
-                                                  extends   - ObserverZooKeeperServer
-            Learner ◇--- LearnerZooKeeperServer <----------| 
-              ^                                             - FollowerZooKeeperServer
-              | extends
-            ----------------
-           |                |
-        Follower        Observer
+                                               
+                    Learner ◇--- LearnerZooKeeperServer 
+                       ^                               
+                       | extends
+                    ----------------
+                   |                |
+                Follower        Observer
+
 
 
                                                - ServerStats serverStats
@@ -320,19 +391,19 @@ State
             create ServerCnxnFactory (default NIOServerCnxnFactory)
                   |
                   | serverCnxnFactory.
-                  |                           -  bind 2181
+                  |                           -  bind 2181 (clientPort)
             configure(2181, maxClientCnxns) -|
                   |                           -  register OP_ACCEPT
                   |                           
             new QuorumPeer
                   |                           
-            loadDataTree
-                  |                           
-            cnxnFatory.start
+            loadDataBase
+                  |           client                
+            cnxnFatory.start --------
                   |                           
             startLeaderElection
                   |                           
-            start self thread
+                 run
 
 
 port
