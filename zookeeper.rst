@@ -516,3 +516,123 @@ Client
 ======
 
 new ZooKeeper(ensemble) 会通过 Collections.shuffle()随机找个zk连接，当这个有问题时，会next
+
+
+SnapShot文件格式
+----------------
+
+The server itself only needs the latest complete fuzzy snapshot and the log files from the start of that snapshot.
+
+snapshot.xxx：
+xxx is the zxid, the ZooKeeper transaction id, of the last committed transaction at the start of the snapshot
+
+log.xxx：
+xxx is the first zxid written to that log
+
+LogFormatter is used to check out contents of log file
+
+文件尾：
+
+writeLong(crcChecksumValue)
+writeString("/")  // 00 0000 012f
+
+
+文件头：
+
+::
+
+    5a4b 534e 0000 0002 ffff ffff ffff ffff
+    --------- --------- -------------------
+    magic     version   dbid
+
+    0000 0000    0000 0001 0000 0000 0000 0001
+    ---------    --------- -------------------
+    sessionCount map       long
+
+    0000 0001 0000 001f 0000 0005 776f 726c
+    --------- --------- --------- ---------
+    aclLen   aclPerms   {strLen    schem
+
+    64 00 0000 06 61 6e79 6f6e 65 00 0000 00 00
+    -- ---------- --------------- ---------- --
+    a  strLen     schema}id        path              
+
+    0000 00   ff ffff ffff ffff ff 00 0000 0000
+    -------   -------------------- ------------
+    {nodeData acl                  czxid
+
+    0000 00 00 0000 0000 0000 00 00 0000 0000
+    ------- -------------------- ------------
+            mzxid                ctime
+
+    0000 00 00 0000 0000 0000 00 00 0000 00 00
+    ------- -------------------- ---------- --
+            mtime                version
+
+    0000 01  00 0000 00 00 0000 0000 0000 00 00
+    -------  ---------- -------------------- --
+    cversion aversion   ephemeralOwner
+
+    0000 0000 0000 03 00 0000 05 2f 6465 6d6f
+    ----------------- ---------- ------------
+    pzxid}dataNode    pathLen    /demo
+                 
+    0000 0006 4269 6e67 6f21 0000 0000 0000
+    --------- -------------- --------------
+    dataLen   Bingo!         {acl
+
+    0001 0000 0000 0000 0003 0000 0000 0000
+    ---- ------------------- --------------
+         czxid               mzxid
+
+    000a 0000 0138 b1d5 8bf4 0000 0138 b208
+    ---- ------------------- --------------
+         ctime               mtime
+
+    c53c 0000 0002 0000 0000 0000 0000 0000
+    ---- --------- --------- --------- ----
+         version   cversion  aversion
+
+    0000 0000 0000 0000 0000 0000 0003 0000
+    -------------- -------------------
+    ephemeralOwner  pzxid
+
+    struct FileHeader {
+        int magic;      // "ZKSN"
+        int version;    // 2
+        long dbid;      // -1
+    }
+
+    struct Sessions {
+        int count;
+        List<long sessionId, int sessionTimeout>; // count
+    }
+
+    struct DataTree {
+        int mapSize;
+        List<Map<Long, List<ACL>>> map;
+
+        List struct DataNode {
+            int pathLen;
+            string path;
+
+            int dataLen;
+            byte[] data;
+            long acl;
+            
+            struct Stat {
+                long czxid;
+                long mzxid;
+                long ctime;
+                long mtime;
+                int version;
+                int cversion;
+                int aversion;
+                long ephemeralOwner;
+                long pzxid;
+            };
+        }
+
+        string nextPath;
+    }
+
