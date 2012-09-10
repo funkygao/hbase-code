@@ -636,3 +636,49 @@ writeString("/")  // 00 0000 012f
         string nextPath;
     }
 
+
+Contribute
+==========
+
+src
+---
+
+::
+
+    svn checkout http://svn.apache.org/repos/asf/zookeeper/trunk/ zookeeper-trunk
+
+unittest
+--------
+
+::
+
+    ant -Djavac.args="-Xlint -Xmaxwarns 1000" clean test tar
+    ant test
+    ant -diagnostics
+
+javadoc
+-------
+
+::
+
+    ant javadoc
+    open build/docs/api/index.html
+
+patch
+-----
+
+create
+^^^^^^
+
+::
+
+    svn stat
+    svn diff > ZOOKEEPER-<JIRA#>.patch
+
+apply
+^^^^^
+
+::
+
+    patch -p0 [--dry-run] < ZOOKEEPER-<JIRA#>.patch
+
