@@ -361,10 +361,12 @@ ZxidUtils
 czxid
 ^^^^^
 The zxid of the change that caused this znode to be created.
+创建本节点时的zxid 
 
 mzxid
 ^^^^^
 The zxid of the change that last modified this znode.
+本节点最后修改时的zxid
 
 pzxid
 ^^^^^
@@ -376,28 +378,35 @@ time
 ctime
 ^^^^^
 The time in milliseconds from epoch when this znode was created.
+都以leader时间为准
 
 mtime
 ^^^^^
-last modified
+last modified, 以leader时间为准 
 
 version
 --------
 The number of changes to the data of this znode
 
+通过setData会增加版本，每次修改会使version版本增加1.
+
 cversion
 ^^^^^^^^
 The number of changes to the children of this znode
+孩子变化时会更改父亲节点的版本，每当有孩子增加或者删除时，此版本增加1 
 
 aversion
 ^^^^^^^^
 The number of changes to the ACL of this znode.
+
+每当有对此节点进行setACL操作时，aversion会自动增加1
 
 ephemeralOwner
 --------------
 The session id of the owner of this znode if the znode is an ephemeral node. 
 If it is not an ephemeral node, it will be zero.
 
+如果节点为临时节点，则表明那个session创建此节点
 
 
 startup
