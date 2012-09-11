@@ -13,6 +13,8 @@ how zookeeper runs
 NOTES
 =====
 
+选择leader过程中将不能处理用户的请求
+
 ::
 
     public enum ServerState {
@@ -42,6 +44,16 @@ NOTES
        |      response        |                            |
        |<---------------------|                            |
        |                      |                            |
+
+
+======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
+server                   PreRequestProcessor SyncRequestProcessor ProposalRequestProcessor FollowerRequestProcessor ObserverRequestProcessor CommitProcessor ToBeAppliedRequestProcessor FinalRequestProcessor SyncRequestProcessor AckRequestProcessor SendAckRequestProcessor
+======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
+ZooKeeperServer          ■                   ■                    □                        □                        □                        □               □                           ■                     □                    □                   □
+LeaderZooKeeperServer    ■                   □                    ■                        □                        □                        ■               ■                           ■                     ■                    ■                   □
+FollowerZooKeeperServer  □                   □                    □                        ■                        □                        ■               □                           ■                     ■                    □                   ■
+ObserverZooKeeperServer                      □                    □                        □                        ■                        ■               □                           ■                     ■                    □                   ■
+======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
 
 
 Replica consistency
