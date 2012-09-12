@@ -46,14 +46,21 @@ NOTES
        |                      |                            |
 
 
-======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
-server                   PreRequestProcessor SyncRequestProcessor ProposalRequestProcessor FollowerRequestProcessor ObserverRequestProcessor CommitProcessor ToBeAppliedRequestProcessor FinalRequestProcessor SyncRequestProcessor AckRequestProcessor SendAckRequestProcessor
-======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
-ZooKeeperServer          ■                   ■                    □                        □                        □                        □               □                           ■                     □                    □                   □
-LeaderZooKeeperServer    ■                   □                    ■                        □                        □                        ■               ■                           ■                     ■                    ■                   □
-FollowerZooKeeperServer  □                   □                    □                        ■                        □                        ■               □                           ■                     ■                    □                   ■
-ObserverZooKeeperServer                      □                    □                        □                        ■                        ■               □                           ■                     ■                    □                   ■
-======================== =================== ==================== ======================== ======================== ======================== =============== =========================== ===================== ==================== =================== =======================
+=========================== =============== ===================== ======================= =======================
+processor                   ZooKeeperServer LeaderZooKeeperServer FollowerZooKeeperServer ObserverZooKeeperServer
+=========================== =============== ===================== ======================= =======================
+PreRequestProcessor         ■               ■                     □                       □
+SyncRequestProcessor        ■               □                     □                       □
+ProposalRequestProcessor    □               ■                     □                       □
+FollowerRequestProcessor    □               □                     ■                       □
+ObserverRequestProcessor    □               □                     □                       ■
+CommitProcessor             □               ■                     ■                       ■
+ToBeAppliedRequestProcessor □               ■                     □                       □
+FinalRequestProcessor       ■               ■                     ■                       ■
+SyncRequestProcessor        □               ■                     ■                       ■
+AckRequestProcessor         □               ■                     □                       □
+SendAckRequestProcessor     □               □                     ■                       ■
+=========================== =============== ===================== ======================= =======================
 
 
 Replica consistency
