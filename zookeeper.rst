@@ -565,6 +565,53 @@ Client
 new ZooKeeper(ensemble) 会通过 Collections.shuffle()随机找个zk连接，当这个有问题时，会next
 
 
+Log文件格式
+-----------
+
+Preallocate strategy, we define EOF to be an empty transaction
+
+::
+
+    struct FileHeader {
+        int magic;      // "ZKLG"
+        int version;    // 2
+        long dbid;      // 0
+    }
+
+    struct TxnHeader {
+        long clientId; // session id
+        int cxid;
+        long zxid;
+        long time;
+        int type; // 事务类型
+    }
+    
+
+    5a4b 4c47   0000 0002   0000 0000   0000 0000  ---- FileHeader
+    ---------   ---------   ---------------------
+    magic       version     dbid
+
+    0000 0000   81ec 0918   0000 0024   0139 90db  ---
+    ---------------------   ---------   ---------     |
+    crc value of the entry  entry len   {clientId     |
+                                                      | 1                 - CheckVersionTxn
+    01c8 0000   0000 0000   0000 0000   0000 000e     | Transaction -----|- SetMaxChildrenTxn
+    ---------   ---------   ---------------------     | entry            |- SetDataTxn
+            }   cxid        zxid                      |                  |- SetACLTxn
+                                                      |                  |- MultiTxn
+    0000 0139   94ab 4f3b   ffff fff6   0000 7530     |                  |- ErrorTxn
+    ---------------------   ---------   ---------     |                  |- DeleteTxn
+    time                    type        txn data      |                  |- CreateTxn
+                                                      |                   - CreateSessionTxn
+    42                                             ---                   
+    --                                              
+    B(End of record flag)
+
+    00 0000   0062 6a09   04  00 0000   20  01 3990
+    ------------------------  ------------  -------
+    crc value of the entry    entry len     {clientId
+
+
 SnapShot文件格式
 ----------------
 
