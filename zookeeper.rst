@@ -33,7 +33,7 @@ NOTES
     client                 follower                     leader
        |                      |                            |
        |      request         |                            |
-       |--------------------->|    request                 |
+       |--------------------->|    forward request         |
        |                      |--------------------------->|
        |                      |    proposal                |
        |                      |<---------------------------|
@@ -44,6 +44,21 @@ NOTES
        |      response        |                            |
        |<---------------------|                            |
        |                      |                            |
+
+
+
+
+       QuorumCxnManager                                                 FastLeaderElection
+
+                     P                                                                  C
+       SendWorker----------->senderWorkderMap<sid, SendWorker>          WorkerSender------------>sendqueue<ToSend>
+           |                                                                |                       ^
+           |         CP                                                 P   |                       |
+            ---------------->queueSendMap<sid, ArrayBlockingQueue>  <-------            P           |
+                                                                              ----------------------
+                                                                             |
+                     P                                        C              |          P
+       RecvWorker----------->recvQueue<Message> <-----------------------WorkerReceiver---------->recvqueue<Notification>
 
 
 =========================== =============== ===================== ======================= =======================
@@ -216,6 +231,17 @@ queue
 - LinkedBlockingQueue<Notification> recvqueue
 
 
+::
+
+            FastLeaderElection.Messenger.WorkerSender
+                | poll
+            sendqueue
+                | offer
+            FastLeaderElection.Messenger.WorkerReceiver
+
+
+
+
 QuorumPeer
 ==========
 
@@ -353,6 +379,9 @@ connection
 zxid
 -----
 
+zxid = (epoch, counter)
+
+
 ZooKeeper Transaction Id，global ordered sequence id
 
 每次write请求对应一个唯一的zxid，如果zxid(a) < zxid(b)，则可以保证a一定发生在b之前
@@ -485,6 +514,40 @@ FileTxnLog  FileSnap
 
 ZKDatabase  
 DataTree DataNode
+
+::
+
+                     path               DataNode
+                    -----------        ----------------------------- <----------
+                   | /         |----->| content | parent | children |---        |
+                   |-----------|       -----------------------------    |       |
+                   |           |                    ^         |         |       |
+                   |           |                    |         |         V       |
+                   |           |        DataNode    |         V         |       |
+                   |           |       -----------------------------    |       |
+                   | /demo     |----->| content | parent | children |<--|       |
+                   |           |       -----------------------------    |       |
+                   |           |                    ^         |         |       |
+                   |-----------|                    |         |         |       |
+                   |           |        DataNode    |         V         |       ^
+                   |           |       -----------------------------    |       |
+                   | /demo/foo |----->| content | parent | children |<--|       |
+                   |           |       -----------------------------    |       |
+                   |           |                                        |       |
+                   |-----------|                                        |       |
+                   |           |                                        |       |
+                   |           |        DataNode                        |       |
+                   |           |       -----------------------------    |       |
+                   | /bar      |----->| content | parent | children |<--        |
+                   |           |       -----------------------------            |
+                   |           |                    |                           |
+                   |           |                    |                           |
+                   |-----------|                     ------------>--------------
+                   |           |       
+                   | ...       |
+                   |           |       
+                    -----------
+
 
 ServerCnxnFactory <- NIOServerCnxnFactory
 ServerCnxn <- NIOServerCnxn
@@ -622,6 +685,8 @@ xxx is the zxid, the ZooKeeper transaction id, of the last committed transaction
 
 log.xxx：
 xxx is the first zxid written to that log
+
+Current DataTree = snapshort.xxx + log.xxx
 
 LogFormatter is used to check out contents of log file
 
