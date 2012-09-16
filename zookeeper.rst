@@ -46,12 +46,13 @@ NOTES
        |                      |                            |
 
 
-
+       C=consumer  P=producer
 
        QuorumCxnManager                                                 FastLeaderElection
+       ----------------                                                 ------------------
 
                      P                                                                  C
-       SendWorker----------->senderWorkderMap<sid, SendWorker>          WorkerSender------------>sendqueue<ToSend>
+       SendWorker----------->senderWorkerMap<sid, SendWorker>           WorkerSender------------>sendqueue<ToSend>
            |                                                                |                       ^
            |         CP                                                 P   |                       |
             ---------------->queueSendMap<sid, ArrayBlockingQueue>  <-------            P           |
@@ -59,6 +60,12 @@ NOTES
                                                                              |
                      P                                        C              |          P
        RecvWorker----------->recvQueue<Message> <-----------------------WorkerReceiver---------->recvqueue<Notification>
+                                                                                                    ^
+                                                                                                    | C
+                                                                                                    |
+                                                                                                lookForLeader()
+
+
 
 
 =========================== =============== ===================== ======================= =======================
