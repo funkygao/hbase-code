@@ -65,22 +65,64 @@ Queues
 Threads
 ^^^^^^^
 
-======================================= ================
-Class                                   Description
-======================================= ================
-ClientCnxn.EventThread                  
-ClientCnxn.SendThread                   ping
-NIOServerCnxnFactory                    bind(clientPort)
-QuorumCnxManager.Listener               bind(electionPort)
-QuorumCnxManager.SendWorker
-QuorumCnxManager.RecvWorker
-QuorumPeer                              LOOKING/OBSERVING/FOLLOWING/LEADING各状态的housekeeping
-Leader.LearnerCnxAcceptor               bind(quorumPort)，为每个follower的连接建立1个LearnerHandler
+=============================================== =============================================================== ==========
+Class                                           Description                                                     CountUnit
+=============================================== =============================================================== ==========
+QuorumPeer                                      LOOKING/OBSERVING/FOLLOWING/LEADING各状态转换的housekeeping     per server
+NIOServerCnxnFactory                            bind(`clientPort`)，为每个cnxn创建一个NIOServerCnxn处理请求     per server
+ClientCnxn.EventThread                          接收NIOServerCnxn的response                                     per client
+ClientCnxn.SendThread                           向NIOServerCnxn发送request                                      per client
+QuorumCnxManager.Listener                       bind(`electionPort`), sleeps on accept()                        per server
+QuorumCnxManager.SendWorker                                                                                     per sid
+QuorumCnxManager.RecvWorker                                                                                     per sid
+FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文，每个connection一个该线程                per connection
+FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文，每个connection一个该线程                per connection
+Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个follower的连接建立1个LearnerHandler
 LearnerHandler
-SessionTrackerImpl                      跟踪session是否超时，Leader only
-FastLeaderElection.WorkerReceiver
-FastLeaderElection.WorkerSender
-======================================= ================
+SessionTrackerImpl                              跟踪session是否超时，Leader only
+=============================================== =============================================================== ==========
+
+quorum connection direction with 5 nodes
+
+======= ======= ======= ======= ======= ========
+sid     1       2       3       4       5
+======= ======= ======= ======= ======= ========
+1       <>      <       <       <       <
+2               <>      <       <       <
+3                       <>      <       <
+4                               <>      <
+5                                       <>
+======= ======= ======= ======= ======= ========
+
+::
+
+        Peer1                                           Peer2
+        -----                                           ----------------------------------------------------------
+
+        QuorumCnxManager                  Socket        QuorumCnxManager                        FastLeaderElection
+        ----------------                  ------        ----------------                        ------------------
+             |                              |               |                                       |
+             |        C              write  |   read        |          P                    C       |
+        queueSendMap--->SenderWorker------->|---------->RecvWorker--------->recvQueue---------->WorkerReceiver
+             |                              |               |                                       |
+             |        P              read   |   write       |          C                    P       |
+        recvQueue<------RecvWorker<---------|<----------SenderWorker<-------queueSendMap<-------WorkerSender
+                                            |
+                                            |
+
+
+
+
+protocols msg format
+
+=============== =========================== ===========
+port            phase                       msg                
+=============== =========================== ===========
+electionPort    initiateConnection          long(sid)           
+electionPort    recv msg                    int(length)  -> byte[length]
+quorumPort
+clientPort
+=============== =========================== ===========
 
 
 C/S
