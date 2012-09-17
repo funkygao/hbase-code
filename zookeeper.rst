@@ -41,7 +41,26 @@ Queues
 
 ::
 
-       C=consumer  P=producer
+        C=consumer  P=producer
+
+        Peer1                                           Peer2
+        -----                                           -----------------------------------------------------------------------------
+
+        QuorumCnxManager                  Socket        QuorumCnxManager                        FastLeaderElection      lookForLeader
+        ----------------                  ------        ----------------                        ------------------      -------------   
+             |                              |               |                                       |                       |  
+             |                              |               |                                       |                       | C
+             |        C              write  |   read        |          P                    C       |            P          V
+        queueSendMap--->SenderWorker------->|---------->RecvWorker--------->recvQueue---------->WorkerReceiver--------->recvqueue<Notification>
+             |                              |               |                                       |   |
+             |                              |               |                                       |   |        P
+             |                              |               |                                       |    ------------>-----
+             |        P              read   |   write       |          C                    P       |            C         |
+        recvQueue<------RecvWorker<---------|<----------SenderWorker<-------queueSendMap<-------WorkerSender<-----------sendqueue<ToSend>
+                                            |
+                                            |
+
+
 
        QuorumCnxManager                                                 FastLeaderElection
        ----------------                                                 ------------------
@@ -93,24 +112,6 @@ sid     1       2       3       4       5
 4                               <>      <
 5                                       <>
 ======= ======= ======= ======= ======= ========
-
-::
-
-        Peer1                                           Peer2
-        -----                                           ----------------------------------------------------------
-
-        QuorumCnxManager                  Socket        QuorumCnxManager                        FastLeaderElection
-        ----------------                  ------        ----------------                        ------------------
-             |                              |               |                                       |
-             |        C              write  |   read        |          P                    C       |
-        queueSendMap--->SenderWorker------->|---------->RecvWorker--------->recvQueue---------->WorkerReceiver
-             |                              |               |                                       |
-             |        P              read   |   write       |          C                    P       |
-        recvQueue<------RecvWorker<---------|<----------SenderWorker<-------queueSendMap<-------WorkerSender
-                                            |
-                                            |
-
-
 
 
 protocols msg format
