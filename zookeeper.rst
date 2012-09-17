@@ -9,6 +9,152 @@ how zookeeper runs
 .. contents:: Table Of Contents
 .. section-numbering::
 
+Overview
+========
+
+Metrics
+-------
+
+- Java Files
+
+  429
+
+- LOC
+
+  78324
+
+
+Peer
+----
+
+view
+^^^^
+
+- getView
+
+- getVotingView
+
+- getObservingView
+
+Queues
+^^^^^^
+
+::
+
+       C=consumer  P=producer
+
+       QuorumCnxManager                                                 FastLeaderElection
+       ----------------                                                 ------------------
+
+                     P                                                                  C
+       SendWorker----------->senderWorkerMap<sid, SendWorker>           WorkerSender------------>sendqueue<ToSend>
+           |                                                                |                       ^
+           |         CP                                                 P   |                       |
+            ---------------->queueSendMap<sid, ArrayBlockingQueue>  <-------            P           |
+                                                                              ----------------------
+                                                                             |
+                     P                                        C              |          P
+       RecvWorker----------->recvQueue<Message> <-----------------------WorkerReceiver---------->recvqueue<Notification>
+                                                                                                    ^
+                                                                                                    | C
+                                                                                                    |
+                                                                                                lookForLeader()
+
+
+
+Threads
+^^^^^^^
+
+======================================= ================
+Class                                   Description
+======================================= ================
+ClientCnxn.EventThread                  
+ClientCnxn.SendThread                   ping
+NIOServerCnxnFactory                    bind(clientPort)
+QuorumCnxManager.Listener               bind(electionPort)
+QuorumCnxManager.SendWorker
+QuorumCnxManager.RecvWorker
+QuorumPeer                              LOOKING/OBSERVING/FOLLOWING/LEADING各状态的housekeeping
+Leader.LearnerCnxAcceptor               bind(quorumPort)，为每个follower的连接建立1个LearnerHandler
+LearnerHandler
+SessionTrackerImpl                      跟踪session是否超时，Leader only
+FastLeaderElection.WorkerReceiver
+FastLeaderElection.WorkerSender
+======================================= ================
+
+
+C/S
+^^^
+
+::
+
+
+                            ServerCnxnFactory                   ServerCnxn                  
+                                ^                                  ^
+                                | extends                          | extends
+                                |                                  | 
+    ClientCnxn         NIOServerCnxnFactory                     NIOServerCnxn               ZooKeeperServer
+      |                         |                                  |                                |
+      |                         | bind(clientPort)                 |                                |
+      |                         |------<>---------                 |                                |
+      |  connect                |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         | accept                           |                                |
+      |                         |---<>--                           |                                |
+      |                         |                                  |                                |
+      |                         | new instance                     |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | interestOps(OP_READ)           |
+      |                         |                                  |---<>----------------           |
+      |                         | register cnxn                    |                                |
+      |                         |-----<>--------                   |                                |
+      |  connect request        |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         |                                  |                                |
+      |                         | doIO                             |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | checkFourLetterWord            |
+      |                         |                                  |------<>------------            |
+      |                         |                                  |                                |
+      |                         |                                  | readPayload                    |
+      |                         |                                  |------<>------------            |
+      |                         |                                  |                                |
+      |                         |                                  | processConnectRequest          |
+      |                         |                                  |------------------------------->|
+      |                         |                                  |                                |
+      |  request                |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         |                                  |                                |
+      |                         | doIO                             |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | processPacket                  |
+      |                         |                                  |------------------------------->|
+      |                         |                                  |                                |
+
+
+Election
+^^^^^^^^
+
+::
+
+
+         Peer               QuorumCnxManager    Listener
+          |                     |                   |
+          |                     | new               |
+          |                     |------------------>|
+          |                     |                   | bind(electionAddr)
+          |                     |                   |--------<>---------
+          | connect             |                   |
+          |-------------------->|                   |
+          |                     |                   | accept
+          |                     |                   |--<>---
+          |                     |                   |
+                                |                   |
+                                |                   |
+        
 
 NOTES
 =====
@@ -44,26 +190,6 @@ NOTES
        |      response        |                            |
        |<---------------------|                            |
        |                      |                            |
-
-
-       C=consumer  P=producer
-
-       QuorumCxnManager                                                 FastLeaderElection
-       ----------------                                                 ------------------
-
-                     P                                                                  C
-       SendWorker----------->senderWorkerMap<sid, SendWorker>           WorkerSender------------>sendqueue<ToSend>
-           |                                                                |                       ^
-           |         CP                                                 P   |                       |
-            ---------------->queueSendMap<sid, ArrayBlockingQueue>  <-------            P           |
-                                                                              ----------------------
-                                                                             |
-                     P                                        C              |          P
-       RecvWorker----------->recvQueue<Message> <-----------------------WorkerReceiver---------->recvqueue<Notification>
-                                                                                                    ^
-                                                                                                    | C
-                                                                                                    |
-                                                                                                lookForLeader()
 
 
 
@@ -387,6 +513,8 @@ zxid
 -----
 
 zxid = (epoch, counter)
+epoch = zxid >> 32
+counter = zxid & 0xffffffffL
 
 
 ZooKeeper Transaction Id，global ordered sequence id
@@ -807,6 +935,28 @@ writeString("/")  // 00 0000 012f
     0000 0000 0000 0000 0000 0000 0003 0000          --- 
     -------------- -------------------              
     ephemeralOwner  pzxid                          
+
+
+restore
+-------
+
+::
+
+        ZKDatabase.loadDataBase()
+                    |
+        从dataDir里按照文件倒序排列取得最多100个snapshot.xxx文件
+                    |
+        找到第一个有效的snapshot文件，并反序列化到内存里的DataTree
+                    |
+        通过该snapshot文件名，得到lastProcessedZxid
+                    |
+        lastProcessedZxid以前的所有数据都在snapshot里了，更新的数据在txnLog(WAL)里
+                    |
+        从lastProcessedZxid + 1开始找txnLog
+                    |
+        对每个transaction，在内存replay，同时通过队列机制发送给learners
+                    |
+        得到当前系统的最新zxid值, 内存数据库DataTree初始化完毕
 
 
 Contribute

@@ -70,6 +70,8 @@ Scan 是通过 RegionScanner 实现的，它会为每个 Store 实例执行 Stor
       |                         |                                  |------------------------------->|
       |                         |                                  |                                |
 
+
+
 Startup
 =======
 
@@ -190,6 +192,44 @@ HConnection
     HRegionInterface rs = conn.getHRegionConnection();
     ZooKeeperWatcher zk = conn.getZooKeeperWatcher();
     HRegionLocation rsLocation = conn.locateRegion();
+
+
+ClientCnxn
+==========
+
+::
+
+
+                                            ClientWatchManager  ClientCnxnSocket
+                                                  ^                     ^
+                                                  | extends             | extends
+                                                  |                     |
+    ZooKeeper           ClientCnxn          ZKWatchManager      ClientCnxnSocketNIO 
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+       |                    |                     |                     |
+
+
+    sendThread
+
+    eventThread
+
+
+Packet
+------
+
+::
+
+    RequestHeader
+    ReplyHeader
+    Record request
+    Record response
+    WatchRegistration 
 
 Servers
 =======
