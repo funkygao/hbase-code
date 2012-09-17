@@ -21,6 +21,55 @@ Scan 是通过 RegionScanner 实现的，它会为每个 Store 实例执行 Stor
 
 - hadoop TFile
 
+
+::
+
+
+                            ServerCnxnFactory                   ServerCnxn                  
+                                ^                                  ^
+                                | extends                          | extends
+                                |                                  | 
+    ClientCnxn         NIOServerCnxnFactory                     NIOServerCnxn               ZooKeeperServer
+      |                         |                                  |                                |
+      |                         | bind(clientPort)                 |                                |
+      |                         |------<>---------                 |                                |
+      |  connect                |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         | accept                           |                                |
+      |                         |---<>--                           |                                |
+      |                         |                                  |                                |
+      |                         | new instance                     |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | interestOps(OP_READ)           |
+      |                         |                                  |---<>----------------           |
+      |                         | register cnxn                    |                                |
+      |                         |-----<>--------                   |                                |
+      |  connect request        |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         |                                  |                                |
+      |                         | doIO                             |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | checkFourLetterWord            |
+      |                         |                                  |------<>------------            |
+      |                         |                                  |                                |
+      |                         |                                  | readPayload                    |
+      |                         |                                  |------<>------------            |
+      |                         |                                  |                                |
+      |                         |                                  | processConnectRequest          |
+      |                         |                                  |------------------------------->|
+      |                         |                                  |                                |
+      |  request                |                                  |                                |
+      |------------------------>|                                  |                                |
+      |                         |                                  |                                |
+      |                         | doIO                             |                                |
+      |                         |--------------------------------->|                                |
+      |                         |                                  |                                |
+      |                         |                                  | processPacket                  |
+      |                         |                                  |------------------------------->|
+      |                         |                                  |                                |
+
 Startup
 =======
 
