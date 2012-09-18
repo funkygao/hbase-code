@@ -94,8 +94,8 @@ ClientCnxn.SendThread                           向NIOServerCnxn发送request   
 QuorumCnxManager.Listener                       bind(`electionPort`), sleeps on accept()                        per server      启动时
 QuorumCnxManager.SendWorker                                                                                     per sid         [被]连接(connect/accept)其他peer后
 QuorumCnxManager.RecvWorker                                                                                     per sid         [被]连接(connect/accept)其他peer后
-FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文，每个connection一个该线程                per connection  启动时
-FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文，每个connection一个该线程                per connection  启动时
+FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文                                          per connection  启动时
+FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文                                          per connection  启动时
 Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个follower的连接建立1个LearnerHandler                     称为leader后马上
 LearnerHandler                                                                                                                  accept之后
 SessionTrackerImpl                              跟踪session是否超时，Leader only
