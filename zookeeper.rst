@@ -21,7 +21,7 @@ Metrics
 
 - LOC
 
-  78324
+  78,324
 
 
 Peer
