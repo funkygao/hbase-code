@@ -120,6 +120,21 @@ Queues
 
 
 
+        Follower                Leader              Observer
+        --------                ------              --------
+          |                       |                     |
+          |  connect              |                     |
+          |---------------------->|                     |
+          |                       |                     |
+          | FOLLOWERINFO          |                     |
+          |---------------------->|                     |
+          |                       |                     |
+          |           NEWLEADER   |                     |
+          |<----------------------|                     |
+          |                       |                     |
+          |                       |                     |
+          |                       |                     |
+
 Threads
 ^^^^^^^
 
@@ -135,12 +150,14 @@ QuorumCnxManager.SendWorker                                                     
 QuorumCnxManager.RecvWorker                                                                                     per sid         [被]连接(connect/accept)其他peer后
 FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文                                          per connection  启动时
 FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文                                          per connection  启动时
-Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个follower的连接建立1个LearnerHandler                     称为leader后马上
-LearnerHandler                                                                                                                  accept之后
+Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个learner的连接建立1个LearnerHandler                      成为leader后马上
+LearnerHandler                                  Leader内负责包括数据同步在内的与learner的一切通信               per learner cnx accept之后
 SessionTrackerImpl                              跟踪session是否超时，Leader only
 =============================================== =============================================================== =============== =====
 
 quorum connection direction with 5 nodes
+
+只允许id比较大的server发起主动连接：由于任意server在启动时都会主动向其他server发起连接，如果这样，任意两台server之间就拥有两条连接，这明显是没有必要的
 
 ======= ======= ======= ======= ======= ========
 sid     1       2       3       4       5
