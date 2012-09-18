@@ -27,8 +27,8 @@ Metrics
 Peer
 ----
 
-view
-^^^^
+global view
+^^^^^^^^^^^
 
 - getView
 
