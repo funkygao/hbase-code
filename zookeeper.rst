@@ -84,22 +84,22 @@ Queues
 Threads
 ^^^^^^^
 
-=============================================== =============================================================== ==========
-Class                                           Description                                                     CountUnit
-=============================================== =============================================================== ==========
-QuorumPeer                                      LOOKING/OBSERVING/FOLLOWING/LEADING各状态转换的housekeeping     per server
-NIOServerCnxnFactory                            bind(`clientPort`)，为每个cnxn创建一个NIOServerCnxn处理请求     per server
+=============================================== =============================================================== =============== =====
+Class                                           Description                                                     CountUnit       Ready
+=============================================== =============================================================== =============== =====
+QuorumPeer                                      LOOKING/OBSERVING/FOLLOWING/LEADING各状态转换的housekeeping     per server      启动时
+NIOServerCnxnFactory                            bind(`clientPort`)，为每个cnxn创建一个NIOServerCnxn处理请求     per server      启动时
 ClientCnxn.EventThread                          接收NIOServerCnxn的response                                     per client
 ClientCnxn.SendThread                           向NIOServerCnxn发送request                                      per client
-QuorumCnxManager.Listener                       bind(`electionPort`), sleeps on accept()                        per server
-QuorumCnxManager.SendWorker                                                                                     per sid
-QuorumCnxManager.RecvWorker                                                                                     per sid
-FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文，每个connection一个该线程                per connection
-FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文，每个connection一个该线程                per connection
-Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个follower的连接建立1个LearnerHandler
-LearnerHandler
+QuorumCnxManager.Listener                       bind(`electionPort`), sleeps on accept()                        per server      启动时
+QuorumCnxManager.SendWorker                                                                                     per sid         [被]连接(connect/accept)其他peer后
+QuorumCnxManager.RecvWorker                                                                                     per sid         [被]连接(connect/accept)其他peer后
+FastLeaderElection.Messenger.WorkerReceiver     LeaderElection中收报文，每个connection一个该线程                per connection  启动时
+FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文，每个connection一个该线程                per connection  启动时
+Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个follower的连接建立1个LearnerHandler                     称为leader后马上
+LearnerHandler                                                                                                                  accept之后
 SessionTrackerImpl                              跟踪session是否超时，Leader only
-=============================================== =============================================================== ==========
+=============================================== =============================================================== =============== =====
 
 quorum connection direction with 5 nodes
 
