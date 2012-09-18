@@ -36,6 +36,8 @@ global view
 
 - getObservingView
 
+- currentVote
+
 Queues
 ^^^^^^
 
@@ -46,19 +48,56 @@ Queues
         Peer1                                           Peer2
         -----                                           -----------------------------------------------------------------------------
 
-        QuorumCnxManager                  Socket        QuorumCnxManager                        FastLeaderElection      lookForLeader
-        ----------------                  ------        ----------------                        ------------------      -------------   
-             |                              |               |                                       |                       |  
-             |                              |               |                                       |                       | C
-             |        C              write  |   read        |          P                    C       |            P          V
-        queueSendMap--->SenderWorker------->|---------->RecvWorker--------->recvQueue---------->WorkerReceiver--------->recvqueue<Notification>
-             |                              |               |                                       |   |
-             |                              |               |                                       |   |        P
-             |                              |               |                                       |    ------------>-----
-             |        P              read   |   write       |          C                    P       |            C         |
-        recvQueue<------RecvWorker<---------|<----------SenderWorker<-------queueSendMap<-------WorkerSender<-----------sendqueue<ToSend>
+        QuorumCnxManager                  Socket        QuorumCnxManager                        FastLeaderElection      lookForLeader       QuorumVote
+        ----------------                  ------        ----------------                        ------------------      -------------       ----------
+             |                              |               |                                       |                       |                   |
+             |                              |               |                                       |                       |-------------------|---
+             |                              |               |                                       |                       |         ----------    |
+             |                              |               |                                       |                       | C      |              |
+             |        C              write  |   read        |          P                    C       |            P          V        |              | sendNotifications
+        queueSendMap--->SenderWorker------->|---------->RecvWorker--------->recvQueue---------->WorkerReceiver--------->recvqueue<Notification>     |
+             |                              |               |                                       |   |                                           |
+             |                              |               |                                       |   |        P                       P          |
+             |                              |               |                                       |    ------------>-----      -------------------
+             |                              |               |                                       |                      |    |
+             |        P              read   |   write       |          C                    P       |            C         V    V
+        recvQueue<------RecvWorker<---------|<----------SendWorker<---------queueSendMap<-------WorkerSender<------------sendqueue<ToSend>
                                             |
                                             |
+
+                                                                                                            
+        FastLeaderElection                                           QuorumCnxManager                                                 
+        ------------------------------------------                   -----------------------------------------------------------     
+                                                    manager.toSend                                                                  socket
+        lookForLeader -> sendqueue -> WorkerSender ----------------> QuorumCnxManager.queueSendMap -> QuorumCnxManager.SendWorker ---------->  告诉别人我的投票
+
+
+        QuorumCnxManager                                 FastLeaderElection
+        -----------------------                          -----------------------------------------------------------
+                                 manager.pollRecvQueue
+        RecvWorker -> recvQueue -----------------------> WorkerReceiver -> recvqueue -> 我就知道其他peers的投票情况咯
+
+
+        FastLeaderElection      sendNotifications       sendqueue       WorkerSender        QuorumCnxManager    recvQueue       queueSendMap
+        ------------------      -----------------       ---------       ------------        ----------------    ---------       ------------
+            |                       |                       |               |                       |               |               |
+            |   call                |                       |               |                       |               |               |
+            |---------------------->|                       |               |                       |               |               |
+            |                       |   enque(ToSend)       |               |                       |               |               |
+            |                       |---------------------->|               |                       |               |               |
+            |                       |                       |  poll(3s)     |                       |               |               |
+            |                       |                       |<--------------|                       |               |               |
+            |                       |                       |               |   toSend(ByteBuffer)  |               |               |
+            |                       |                       |               |---------------------->|               |               |
+            |                       |                       |               |                       |               |               |
+            |                       |                       |               |                       | enque if self |               |
+            |                       |                       |               |                       |-------------->|               |
+            |                       |                       |               |                       |               |               |
+            |                       |                       |               |                       | else enque                    |
+            |                       |                       |               |                       |------------------------------>|
+            |                       |                       |               |                       |               |               |
+            |                       |                       |               |                       |               |               |
+            |                       |                       |               |                       |               |               |
 
 
 
@@ -485,12 +524,10 @@ LEADING      对Follower的投票进行决议，将状态和follower进行同步
 
 ::
 
-                                    ---------
-                                   |         |lookForLeader
-                                   V         |
-                                LOOKING -----
-                                   ^
-                                   |
+                                LOOKING 
+                                 ^   |
+                                 |   | lookForLeader
+                                 |   V
                      --------------------------------------------------
                     |                       |                          |
                 OBSERVING               FOLLOWING                   LEADING
