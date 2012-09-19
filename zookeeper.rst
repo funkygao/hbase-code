@@ -119,6 +119,21 @@ Queues
                                                                                                 lookForLeader()
 
 
+        pendingQueue  = pending response
+        outgoingQueue = queued packets
+
+        ClientCnxnSocketNIO             ClientCnxn
+        -------------------             ----------------------------------------------------
+               |                                                            
+               |         C                                                  C
+               |----------------------->pendingQueue        EventThread ----<---waitingEvents
+               |                                                                    |
+               |                                                                    |
+               |         C                              P                   P       |
+                ----------------------> outgoingQueue<------SendThread ----->-------
+                                            
+
+
 
         Follower                Leader              Observer
         --------                ------              --------
@@ -153,6 +168,8 @@ FastLeaderElection.Messenger.WorkerSender       LeaderElection中发报文      
 Leader.LearnerCnxAcceptor                       bind(quorumPort)，为每个learner的连接建立1个LearnerHandler                      成为leader后马上
 LearnerHandler                                  Leader内负责包括数据同步在内的与learner的一切通信               per learner cnx accept之后
 SessionTrackerImpl                              跟踪session是否超时，Leader only
+ClientCnxn.SendThread                                                                                           per client
+ClientCnxn.EventThread                          负责watcher的事件接收以及watcher的执行                          per client
 =============================================== =============================================================== =============== =====
 
 quorum connection direction with 5 nodes
@@ -253,7 +270,16 @@ Election
           |                     |                   |
                                 |                   |
                                 |                   |
-        
+
+
+Client
+======
+
+::
+
+        ZooKeeper           ClientCnxn          ClientCnxnSocket
+
+
 
 NOTES
 =====
@@ -912,9 +938,11 @@ SnapShot文件格式
 
 The server itself only needs the latest complete fuzzy snapshot and the log files from the start of that snapshot.
 
+snapshot.+最后一个更新的zxid
 snapshot.xxx：
 xxx is the zxid, the ZooKeeper transaction id, of the last committed transaction at the start of the snapshot
 
+log.+第一条记录对应的zxid
 log.xxx：
 xxx is the first zxid written to that log
 
