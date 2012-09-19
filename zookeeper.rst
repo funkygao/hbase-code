@@ -345,7 +345,11 @@ Zab(zookeeper atomic broadcast) protocol  - a high performance broadcast protoco
 
 - 恢复模式
 
+  选主
+
 - 广播模式
+
+  同步
 
 packets 
 -------
@@ -789,7 +793,7 @@ DataTree DataNode
                    |-----------|                    |         |         |       |
                    |           |        DataNode    |         V         |       ^
                    |           |       -----------------------------    |       |
-                   | /demo/foo |----->| content | parent | children |<--|       |
+                   | /demo/foo |----->| content | parent | children |   |       |
                    |           |       -----------------------------    |       |
                    |           |                                        |       |
                    |-----------|                                        |       |
