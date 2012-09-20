@@ -193,7 +193,7 @@ protocols msg format
 port            phase                       msg                
 =============== =========================== ===========
 electionPort    initiateConnection          long(sid)           
-electionPort    recv msg                    int(length)  -> byte[length]
+electionPort    recv msg                    int(length)  -> byte[length] -> [int(state), long(leader), long(zxid), long(electi
 quorumPort
 clientPort
 =============== =========================== ===========
